@@ -1,0 +1,76 @@
+# Streamers whose GTA VI streams we are allowed to clip (paid clipping campaigns on Content Rewards).
+# Only add a streamer here when you have permission (a campaign or a written OK from them).
+#
+# Fields:
+#   id           short name used in file names and the CLI
+#   platform     twitch | kick | youtube
+#   channel      channel slug / handle on that platform
+#   videos_url   page listing the VODs (yt-dlp playlist URL); Kick uses its API instead
+#   since        ignore VODs published before this date (campaign start)
+#   credit       text shown on screen for the whole clip
+#   hashtags     required by the campaign brief, go first in the caption
+#   cta          last line of the caption (where to send viewers)
+#   language     language of the stream audio (whisper)
+#   layout       fit (gameplay centred on blurred background) or split (facecam on top)
+#   facecam      only for layout=split: facecam box as fractions of the source frame
+#   clips_per_vod how many clips to cut from one VOD
+#   notes        rules from the brief, passed to the clip selector
+
+defaults:
+  language: en
+  layout: fit
+  clips_per_vod: 6
+  min_clip_seconds: 15
+  max_clip_seconds: 60
+
+streamers:
+  - id: dom
+    platform: kick
+    channel: dasgasd3m
+    videos_url: https://kick.com/dasgasd3m/videos
+    since: 2026-11-18
+    credit: "dasgasd3m on Kick"
+    hashtags: ["#dasgasdom3", "#GTA6"]
+    cta: "Watch Dom live: kick.com/dasgasd3m"
+    notes: >
+      RUCKUS campaign. Only his own GTA 6 Kick streams from 18 Nov 2026 on.
+      Keep Dom's face or voice in the clip. Never change what he said or meant.
+      Story spoilers need a spoiler warning in the hook. Avoid NSFW moments.
+      Pays only from 10,000 views on one post, so pick the strongest moments.
+
+  - id: lacy
+    platform: twitch
+    channel: lacy
+    videos_url: https://www.twitch.tv/lacy/videos?filter=archives&sort=time
+    since: 2026-11-18
+    credit: "LACY on Twitch"
+    hashtags: ["#LACY", "#GTA6"]
+    cta: "LACY live on twitch.tv/lacy"
+    notes: >
+      Reach campaign. LACY must be the main focus for the whole clip, not just the intro.
+      Funny moments, memorable quotes, reactions. Never portray LACY negatively.
+      No logos. English only. Mention LACY by name in the hook.
+
+  - id: clix
+    platform: twitch
+    channel: clix
+    videos_url: https://www.twitch.tv/clix/videos?filter=archives&sort=time
+    since: 2026-11-18
+    credit: "Clix on Twitch"
+    hashtags: ["#Clix", "#GTA6"]
+    cta: "Clix live on twitch.tv/clix"
+    notes: >
+      Reach campaign. Clix must be the main focus. Never portray Clix negatively.
+      No logos. English only. Mention Clix by name in the hook.
+
+  - id: tomo
+    platform: youtube
+    channel: Tomovids
+    videos_url: https://www.youtube.com/@Tomovids/streams
+    since: 2026-11-18
+    credit: "Tomo on YouTube"
+    hashtags: ["#GTA6"]
+    cta: "Full stream: youtube.com/@Tomovids"
+    enabled: false   # brief not read yet (Notion page) - enable after checking the rules
+    notes: >
+      Clipping Nation campaign. Brief still to be checked.
