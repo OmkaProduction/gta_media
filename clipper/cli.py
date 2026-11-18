@@ -40,7 +40,7 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
     vod_dir = work / tag
     print(f"[{streamer.id}] {vod.title!r} ({vod.url})")
 
-    audio = sources.download_audio(vod.url, vod_dir / "audio.m4a")
+    audio = sources.download_audio(vod.download_url, vod_dir / "audio.m4a")
     loud = analysis.loudness_per_second(audio)
     candidates = analysis.find_candidates(loud, max_candidates=max(12, streamer.clips_per_vod * 4))
     print(f"[{streamer.id}] {len(loud) / 3600:.1f} h of audio, {len(candidates)} candidate moments")
@@ -59,7 +59,7 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
         if dry_run:
             print(f"  would cut {plan.start:.0f}-{plan.end:.0f}s: {plan.title}")
             continue
-        section = sources.download_section(vod.url, plan.start, plan.end, vod_dir / f"{name}.src.mp4")
+        section = sources.download_section(vod.download_url, plan.start, plan.end, vod_dir / f"{name}.src.mp4")
         ass = vod_dir / f"{name}.ass"
         ass.write_text(captions.build_ass(words, plan.start, plan.end, plan.hook, streamer.credit), encoding="utf-8")
         render.render_vertical(section, ass, out / f"{name}.mp4", streamer.layout, streamer.facecam,

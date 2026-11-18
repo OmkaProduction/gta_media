@@ -202,3 +202,23 @@ def test_end_to_end_with_local_vod(tmp_path, monkeypatch):
     starts = sorted(int(line.split(" at ")[1].split(":")[2][:2]) + 60 * int(line.split(" at ")[1].split(":")[1])
                     for line in review.splitlines() if line.startswith("- Source:"))
     assert any(70 <= s <= 104 for s in starts) and any(190 <= s <= 224 for s in starts)
+
+
+def test_kick_listing_uses_direct_hls_source(monkeypatch, streamers):
+    import io
+    from clipper import sources
+
+    payload = json.dumps([
+        {"session_title": "GTA 6 day 1", "is_live": False, "start_time": "2026-11-18 20:00:00",
+         "duration": 3600000, "source": "https://stream.kick.com/x/master.m3u8", "video": {"uuid": "abc"}},
+        {"session_title": "live now", "is_live": True, "start_time": "2026-11-19 10:00:00",
+         "duration": 0, "source": "https://stream.kick.com/y/master.m3u8", "video": {"uuid": "def"}},
+        {"session_title": "old", "is_live": False, "start_time": "2026-11-10 10:00:00",
+         "duration": 1000, "video": {"uuid": "old"}},
+    ]).encode()
+    monkeypatch.setattr(sources.urllib.request, "urlopen", lambda req, timeout: io.BytesIO(payload))
+    vods = sources.list_new_vods(streamers["dom"], processed=set())
+    assert [v.vod_id for v in vods] == ["abc"]
+    assert vods[0].download_url == "https://stream.kick.com/x/master.m3u8"
+    assert vods[0].url == "https://kick.com/dasgasd3m/videos/abc"
+    assert sources.list_new_vods(streamers["dom"], processed={"dom:abc"}) == []

@@ -22,6 +22,11 @@ class Vod:
     published: dt.date | None
     duration: float | None
     is_live: bool = False
+    media_url: str | None = None  # direct HLS playlist when the platform gives one (Kick)
+
+    @property
+    def download_url(self) -> str:
+        return self.media_url or self.url
 
     @property
     def key(self) -> str:
@@ -94,6 +99,9 @@ def _list_kick(streamer: Streamer, limit: int) -> list[Vod]:
             published=_parse_date(item.get("start_time") or item.get("created_at")),
             duration=(item.get("duration") or 0) / 1000 or None,
             is_live=bool(item.get("is_live")),
+            # The channel API already returns the VOD's HLS playlist; using it directly avoids
+            # yt-dlp's kick:vod extractor, which fails behind Kick's Cloudflare.
+            media_url=item.get("source") or video.get("source") or None,
         ))
     return vods
 
