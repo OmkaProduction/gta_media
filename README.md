@@ -4,7 +4,7 @@ Automatyczne cięcie klipów 9:16 ze streamów GTA VI dla kampanii clippingowych
 
 ## Jak to działa
 
-Co godzinę GitHub Actions (`.github/workflows/clips.yml`):
+Co 3 godziny GitHub Actions (`.github/workflows/clips.yml`):
 
 1. Sprawdza nowe, zakończone VOD-y streamerów z `config/streamers.yaml` (Twitch, Kick, YouTube).
 2. Pobiera samo audio i szuka najgłośniejszych reakcji (śmiech, krzyk) względem tła streamu.
