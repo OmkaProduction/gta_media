@@ -140,11 +140,35 @@ def download_audio(vod_url: str, dest: Path) -> Path:
         check=True, capture_output=True, text=True,
     )
     stream_url = res.stdout.strip().splitlines()[-1]
+    if is_unfinished_hls(stream_url):
+        raise StillLive(vod_url)
     subprocess.run([
         "ffmpeg", "-v", "error", "-y", "-i", stream_url, "-vn", "-c:a", "aac", "-b:a", "64k",
         "-ac", "1", str(dest),
-    ], check=True)
+    ], check=True, timeout=4 * 3600)
     return dest
+
+
+class StillLive(Exception):
+    """The broadcast behind this VOD has not ended yet; try again on a later run."""
+
+
+def is_unfinished_hls(url: str) -> bool:
+    """True for an HLS playlist that is still growing (no #EXT-X-ENDLIST).
+
+    Twitch lists the VOD of a broadcast that is still live like any other VOD.
+    ffmpeg would follow such a playlist until the stream ends (a marathon: days).
+    """
+    if ".m3u8" not in url or not url.startswith("http"):
+        return False
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            text = resp.read().decode("utf-8", "replace")
+    except Exception as exc:
+        print(f"could not check playlist ({exc}); assuming it is finished")
+        return False
+    return "#EXT-X-ENDLIST" not in text
 
 
 def download_section(vod_url: str, start: float, end: float, dest: Path) -> Path:

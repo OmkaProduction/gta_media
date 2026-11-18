@@ -222,3 +222,38 @@ def test_kick_listing_uses_direct_hls_source(monkeypatch, streamers):
     assert vods[0].download_url == "https://stream.kick.com/x/master.m3u8"
     assert vods[0].url == "https://kick.com/dasgasd3m/videos/abc"
     assert sources.list_new_vods(streamers["dom"], processed={"dom:abc"}) == []
+
+
+def test_unfinished_hls_is_detected(monkeypatch):
+    import io
+    from clipper import sources
+
+    live = b"#EXTM3U\n#EXTINF:10,\nseg1.ts\n"
+    done = live + b"#EXT-X-ENDLIST\n"
+    monkeypatch.setattr(sources.urllib.request, "urlopen", lambda req, timeout: io.BytesIO(live))
+    assert sources.is_unfinished_hls("https://x/v.m3u8") is True
+    monkeypatch.setattr(sources.urllib.request, "urlopen", lambda req, timeout: io.BytesIO(done))
+    assert sources.is_unfinished_hls("https://x/v.m3u8") is False
+    assert sources.is_unfinished_hls("https://x/v.mp4") is False
+
+
+def test_live_vod_is_skipped_and_not_marked(monkeypatch, tmp_path):
+    from clipper import sources
+
+    vods = [sources.Vod("lacy", "1", "https://t/1", "live", None, None),
+            sources.Vod("lacy", "2", "https://t/2", "done", None, None)]
+    monkeypatch.setattr(cli.sources, "list_new_vods", lambda s, processed: vods)
+    calls = []
+
+    def fake_process(streamer, vod, work, out, dry_run):
+        calls.append(vod.vod_id)
+        if vod.vod_id == "1":
+            raise sources.StillLive(vod.url)
+        return []
+
+    monkeypatch.setattr(cli, "process_vod", fake_process)
+    monkeypatch.setattr(cli, "STATE_FILE", tmp_path / "state.json")
+    assert cli.main(["--streamer", "lacy", "--out", str(tmp_path / "o")]) == 0
+    assert calls == ["1", "2"]
+    state = json.loads((tmp_path / "state.json").read_text())
+    assert list(state) == ["lacy:2"]

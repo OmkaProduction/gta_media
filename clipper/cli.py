@@ -99,20 +99,27 @@ def main(argv: list[str] | None = None) -> int:
             vods = [sources.Vod(streamer.id, _slug(args.vod_url)[-30:], args.vod_url, args.vod_url, None, None)]
         else:
             try:
-                vods = sources.list_new_vods(streamer, set(state))[: args.max_vods]
+                vods = sources.list_new_vods(streamer, set(state))
             except Exception as exc:
                 print(f"[{streamer.id}] could not list VODs: {exc}", file=sys.stderr)
                 failures += 1
                 continue
             if not vods:
                 print(f"[{streamer.id}] no new finished VODs")
+        done = 0
         for vod in vods:
+            if done >= args.max_vods:
+                break
             try:
                 review += process_vod(streamer, vod, work, out, args.dry_run)
+            except sources.StillLive:
+                print(f"[{streamer.id}] {vod.url} is still live; will process it after the stream ends")
+                continue
             except Exception as exc:
                 print(f"[{streamer.id}] failed on {vod.url}: {exc}", file=sys.stderr)
                 failures += 1
                 continue
+            done += 1
             if not args.dry_run and not args.vod_url:
                 state[vod.key] = {"url": vod.url, "processed": dt.datetime.now(dt.timezone.utc).isoformat()}
                 save_state(state)
