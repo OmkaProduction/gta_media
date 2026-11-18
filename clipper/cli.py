@@ -35,20 +35,26 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "clip"
 
 
-def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry_run: bool) -> list[str]:
+def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry_run: bool,
+                start: float = 0.0) -> tuple[list[str], sources.AudioChunk]:
     tag = f"{streamer.id}-{_slug(vod.vod_id)}"
     vod_dir = work / tag
-    print(f"[{streamer.id}] {vod.title!r} ({vod.url})")
+    print(f"[{streamer.id}] {vod.title!r} ({vod.url}) from {start / 3600:.1f} h")
 
-    audio = sources.download_audio(vod.download_url, vod_dir / "audio.m4a")
+    chunk = sources.download_audio(vod.download_url, vod_dir / "audio.m4a", start=start)
+    audio = chunk.path
     loud = analysis.loudness_per_second(audio)
     candidates = analysis.find_candidates(loud, max_candidates=max(12, streamer.clips_per_vod * 4))
-    print(f"[{streamer.id}] {len(loud) / 3600:.1f} h of audio, {len(candidates)} candidate moments")
+    print(f"[{streamer.id}] {len(loud) / 3600:.1f} h of audio "
+          f"({'whole VOD' if chunk.finished else 'live, chunk so far'}), {len(candidates)} candidate moments")
 
     words: list[transcribe.Word] = []
     for i, c in enumerate(candidates):
         piece = analysis.cut_audio(audio, c.start, c.end, vod_dir / f"cand{i:02d}.wav")
-        words += transcribe.transcribe(piece, offset=c.start, language=streamer.language)
+        words += transcribe.transcribe(piece, offset=c.start + chunk.start, language=streamer.language)
+    # from here on all times are VOD seconds
+    candidates = [analysis.Candidate(c.peak + chunk.start, c.start + chunk.start, c.end + chunk.start, c.score)
+                  for c in candidates]
 
     plans = select.select_clips(streamer, candidates, words, streamer.clips_per_vod)
     print(f"[{streamer.id}] selected {len(plans)} clips")
@@ -67,7 +73,7 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
         (out / f"{name}.txt").write_text(metadata.caption(streamer, plan) + "\n", encoding="utf-8")
         written.append(metadata.review_entry(streamer, vod.url, plan, f"{name}.mp4"))
     shutil.rmtree(vod_dir, ignore_errors=True)
-    return written
+    return written, chunk
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -99,7 +105,8 @@ def main(argv: list[str] | None = None) -> int:
             vods = [sources.Vod(streamer.id, _slug(args.vod_url)[-30:], args.vod_url, args.vod_url, None, None)]
         else:
             try:
-                vods = sources.list_new_vods(streamer, set(state))
+                finished = {k for k, v in state.items() if v.get("finished", True)}
+                vods = sources.list_new_vods(streamer, finished)
             except Exception as exc:
                 print(f"[{streamer.id}] could not list VODs: {exc}", file=sys.stderr)
                 failures += 1
@@ -111,9 +118,11 @@ def main(argv: list[str] | None = None) -> int:
             if done >= args.max_vods:
                 break
             try:
-                review += process_vod(streamer, vod, work, out, args.dry_run)
+                start = float(state.get(vod.key, {}).get("offset", 0.0))
+                written, chunk = process_vod(streamer, vod, work, out, args.dry_run, start=start)
+                review += written
             except sources.StillLive:
-                print(f"[{streamer.id}] {vod.url} is still live; will process it after the stream ends")
+                print(f"[{streamer.id}] {vod.url} is live with under 30 new minutes; next run")
                 continue
             except Exception as exc:
                 print(f"[{streamer.id}] failed on {vod.url}: {exc}", file=sys.stderr)
@@ -121,7 +130,8 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             done += 1
             if not args.dry_run and not args.vod_url:
-                state[vod.key] = {"url": vod.url, "processed": dt.datetime.now(dt.timezone.utc).isoformat()}
+                state[vod.key] = {"url": vod.url, "processed": dt.datetime.now(dt.timezone.utc).isoformat(),
+                                  "offset": round(chunk.end, 1), "finished": chunk.finished}
                 save_state(state)
 
     if review:

@@ -18,6 +18,8 @@
 
 defaults:
   language: en
+  # only VODs whose title mentions GTA 6 (campaigns pay for GTA 6 content only)
+  title_keywords: ["gta 6", "gta vi", "gta6", "gtavi"]
   layout: fit
   clips_per_vod: 6
   min_clip_seconds: 15

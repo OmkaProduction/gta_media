@@ -116,22 +116,39 @@ def list_new_vods(streamer: Streamer, processed: set[str], limit: int = 10) -> l
             vods = _list_with_ytdlp(streamer, limit)
     else:
         vods = _list_with_ytdlp(streamer, limit)
+    keywords = [k.lower() for k in streamer.extra.get("title_keywords", [])]
     fresh = [
         v for v in vods
-        if not v.is_live
+        if (not keywords or any(k in v.title.lower() for k in keywords))
+
         and v.key not in processed
         and (v.published is None or v.published >= streamer.since)
     ]
     return sorted(fresh, key=lambda v: v.published or dt.date.min)
 
 
-def download_audio(vod_url: str, dest: Path) -> Path:
-    """Audio track only, used to find the moments.
+@dataclass
+class AudioChunk:
+    path: Path
+    start: float      # VOD second where this audio begins
+    end: float        # VOD second where it ends
+    finished: bool    # the whole VOD is covered (broadcast over)
+
+
+MIN_LIVE_CHUNK = 30 * 60   # wait for at least 30 new minutes of a live VOD
+LIVE_SAFETY = 120          # stay 2 min behind the live edge
+
+
+def download_audio(vod_url: str, dest: Path, start: float = 0.0) -> AudioChunk:
+    """Audio track from `start` to the end of the VOD (or to near the live edge).
 
     Kick and Twitch VODs have no audio-only stream, and a 1080p marathon VOD can be
     50+ GB, more than a GitHub runner's disk. So we take the smallest rendition
     (or an audio-only one when it exists) and let ffmpeg keep just the audio,
     without ever storing the video.
+
+    A VOD whose broadcast is still live (24/7 marathons) is processed in chunks:
+    each run takes what was added since the last run, if that is at least 30 min.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest = dest.with_suffix(".m4a")
@@ -140,35 +157,63 @@ def download_audio(vod_url: str, dest: Path) -> Path:
         check=True, capture_output=True, text=True,
     )
     stream_url = res.stdout.strip().splitlines()[-1]
-    if is_unfinished_hls(stream_url):
-        raise StillLive(vod_url)
-    subprocess.run([
-        "ffmpeg", "-v", "error", "-y", "-i", stream_url, "-vn", "-c:a", "aac", "-b:a", "64k",
-        "-ac", "1", str(dest),
-    ], check=True, timeout=4 * 3600)
-    return dest
+    finished, duration = hls_status(stream_url)
+    end = None
+    if not finished:
+        end = duration - LIVE_SAFETY
+        if end - start < MIN_LIVE_CHUNK:
+            raise StillLive(vod_url)
+    cmd = ["ffmpeg", "-v", "error", "-y"]
+    if start:
+        cmd += ["-ss", f"{start:.2f}"]
+    if end is not None:
+        cmd += ["-t", f"{end - start:.2f}"]
+    cmd += ["-i", stream_url, "-vn", "-c:a", "aac", "-b:a", "64k", "-ac", "1", str(dest)]
+    subprocess.run(cmd, check=True, timeout=4 * 3600)
+    if end is None:
+        end = start + _probe_duration(dest)
+    return AudioChunk(path=dest, start=start, end=end, finished=finished)
+
+
+def _probe_duration(path: Path) -> float:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    return float(out or 0)
 
 
 class StillLive(Exception):
-    """The broadcast behind this VOD has not ended yet; try again on a later run."""
+    """The broadcast is live and not enough new footage has been added since the last run."""
 
 
-def is_unfinished_hls(url: str) -> bool:
-    """True for an HLS playlist that is still growing (no #EXT-X-ENDLIST).
+def hls_status(url: str) -> tuple[bool, float]:
+    """(finished, seconds listed so far) for an HLS media playlist.
 
-    Twitch lists the VOD of a broadcast that is still live like any other VOD.
-    ffmpeg would follow such a playlist until the stream ends (a marathon: days).
+    A playlist without #EXT-X-ENDLIST is still growing (the broadcast is live).
+    Non-HLS URLs and unreadable playlists count as finished.
     """
     if ".m3u8" not in url or not url.startswith("http"):
-        return False
+        return True, 0.0
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=30) as resp:
             text = resp.read().decode("utf-8", "replace")
     except Exception as exc:
         print(f"could not check playlist ({exc}); assuming it is finished")
-        return False
-    return "#EXT-X-ENDLIST" not in text
+        return True, 0.0
+    duration = 0.0
+    for line in text.splitlines():
+        if line.startswith("#EXTINF:"):
+            try:
+                duration += float(line[8:].split(",")[0])
+            except ValueError:
+                pass
+    return "#EXT-X-ENDLIST" in text, duration
+
+
+def is_unfinished_hls(url: str) -> bool:
+    return not hls_status(url)[0]
 
 
 def download_section(vod_url: str, start: float, end: float, dest: Path) -> Path:

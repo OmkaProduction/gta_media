@@ -174,10 +174,10 @@ def test_end_to_end_with_local_vod(tmp_path, monkeypatch):
         "aevalsrc='(0.02+0.9*between(t,100,104)+0.9*between(t,220,224))*sin(2*PI*330*t)':s=16000:d=300",
         "-shortest", "-c:v", "libx264", "-preset", "ultrafast", str(vod)], check=True)
 
-    def fake_audio(url, dest):
+    def fake_audio(url, dest, start=0.0):
         dest.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(vod), "-vn", "-c:a", "aac", str(dest)], check=True)
-        return dest
+        return cli.sources.AudioChunk(dest, 0.0, 300.0, True)
 
     def fake_section(url, start, end, dest):
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(start), "-t", str(end - start),
@@ -245,11 +245,11 @@ def test_live_vod_is_skipped_and_not_marked(monkeypatch, tmp_path):
     monkeypatch.setattr(cli.sources, "list_new_vods", lambda s, processed: vods)
     calls = []
 
-    def fake_process(streamer, vod, work, out, dry_run):
+    def fake_process(streamer, vod, work, out, dry_run, start=0.0):
         calls.append(vod.vod_id)
         if vod.vod_id == "1":
             raise sources.StillLive(vod.url)
-        return []
+        return [], sources.AudioChunk(Path("x"), start, 100.0, True)
 
     monkeypatch.setattr(cli, "process_vod", fake_process)
     monkeypatch.setattr(cli, "STATE_FILE", tmp_path / "state.json")
@@ -257,3 +257,46 @@ def test_live_vod_is_skipped_and_not_marked(monkeypatch, tmp_path):
     assert calls == ["1", "2"]
     state = json.loads((tmp_path / "state.json").read_text())
     assert list(state) == ["lacy:2"]
+
+
+def test_live_marathon_is_processed_in_chunks(monkeypatch, tmp_path):
+    from clipper import sources
+
+    vod = sources.Vod("lacy", "9", "https://t/9", "24/7 GTA 6 marathon", None, None)
+    seen = {"lists": [], "starts": []}
+
+    def fake_list(s, processed):
+        seen["lists"].append(set(processed))
+        return [vod]
+
+    def fake_process(streamer, v, work, out, dry_run, start=0.0):
+        seen["starts"].append(start)
+        return [], sources.AudioChunk(Path("x"), start, start + 3600, False)
+
+    monkeypatch.setattr(cli.sources, "list_new_vods", fake_list)
+    monkeypatch.setattr(cli, "process_vod", fake_process)
+    monkeypatch.setattr(cli, "STATE_FILE", tmp_path / "state.json")
+    cli.main(["--streamer", "lacy", "--out", str(tmp_path / "o")])
+    cli.main(["--streamer", "lacy", "--out", str(tmp_path / "o")])
+    assert seen["starts"] == [0.0, 3600.0]          # second run continues where the first stopped
+    assert "lacy:9" not in seen["lists"][1]         # unfinished VOD is offered again
+    state = json.loads((tmp_path / "state.json").read_text())
+    assert state["lacy:9"]["finished"] is False and state["lacy:9"]["offset"] == 7200.0
+
+
+def test_hls_status_sums_duration(monkeypatch):
+    import io
+    from clipper import sources
+
+    text = b"#EXTM3U\n#EXTINF:10.0,\na.ts\n#EXTINF:5.5,\nb.ts\n"
+    monkeypatch.setattr(sources.urllib.request, "urlopen", lambda req, timeout: io.BytesIO(text))
+    assert sources.hls_status("https://x/v.m3u8") == (False, 15.5)
+
+
+def test_title_filter_skips_non_gta6_vods(monkeypatch, streamers):
+    from clipper import sources
+
+    entries = [sources.Vod("lacy", "a", "u", "BIKER DAY joining a biker gang", None, None),
+               sources.Vod("lacy", "b", "u", "GTA 6 EARLY ACCESS marathon", None, None)]
+    monkeypatch.setattr(sources, "_list_with_ytdlp", lambda s, limit: entries)
+    assert [v.vod_id for v in sources.list_new_vods(streamers["lacy"], set())] == ["b"]
