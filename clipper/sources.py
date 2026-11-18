@@ -126,14 +126,25 @@ def list_new_vods(streamer: Streamer, processed: set[str], limit: int = 10) -> l
 
 
 def download_audio(vod_url: str, dest: Path) -> Path:
-    """Audio-only download (small and fast) used to find the moments."""
+    """Audio track only, used to find the moments.
+
+    Kick and Twitch VODs have no audio-only stream, and a 1080p marathon VOD can be
+    50+ GB, more than a GitHub runner's disk. So we take the smallest rendition
+    (or an audio-only one when it exists) and let ffmpeg keep just the audio,
+    without ever storing the video.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    out_tmpl = str(dest.with_suffix("")) + ".%(ext)s"
+    dest = dest.with_suffix(".m4a")
+    res = subprocess.run(
+        ["yt-dlp", "-f", "bestaudio/worst", "-g", vod_url],
+        check=True, capture_output=True, text=True,
+    )
+    stream_url = res.stdout.strip().splitlines()[-1]
     subprocess.run([
-        "yt-dlp", "-f", "bestaudio/best", "-x", "--audio-format", "m4a",
-        "--concurrent-fragments", "8", "-o", out_tmpl, vod_url,
+        "ffmpeg", "-v", "error", "-y", "-i", stream_url, "-vn", "-c:a", "aac", "-b:a", "64k",
+        "-ac", "1", str(dest),
     ], check=True)
-    return dest.with_suffix(".m4a")
+    return dest
 
 
 def download_section(vod_url: str, start: float, end: float, dest: Path) -> Path:
