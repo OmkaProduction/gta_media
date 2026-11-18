@@ -49,6 +49,7 @@ jobs:
 
       - name: Make clips
         env:
+          PYTHONUNBUFFERED: "1"   # show progress in the live log
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           STREAMER: ${{ inputs.streamer }}
           VOD_URL: ${{ inputs.vod_url }}
