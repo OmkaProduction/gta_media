@@ -22,9 +22,26 @@ def _model():
     return WhisperModel(size, device="cpu", compute_type="int8")
 
 
+def load_pcm(audio: Path):
+    """16 kHz mono float32 samples, decoded with ffmpeg.
+
+    We hand faster-whisper a numpy array instead of a file path because its own
+    decoder (PyAV) breaks across PyAV releases (`metadata_errors` was removed in av 16+).
+    """
+    import subprocess
+
+    import numpy as np
+
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(audio), "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+        check=True, capture_output=True,
+    ).stdout
+    return np.frombuffer(raw, dtype=np.float32)
+
+
 def transcribe(audio: Path, offset: float, language: str = "en") -> list[Word]:
     segments, _ = _model().transcribe(
-        str(audio), language=language, word_timestamps=True, vad_filter=True, beam_size=1,
+        load_pcm(audio), language=language, word_timestamps=True, vad_filter=True, beam_size=1,
     )
     words = []
     for seg in segments:
