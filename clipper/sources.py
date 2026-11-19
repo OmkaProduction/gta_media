@@ -178,11 +178,19 @@ def download_audio(vod_url: str, dest: Path, start: float = 0.0) -> AudioChunk:
         cmd += ["-ss", f"{start:.2f}"]
     if end is not None:
         cmd += ["-t", f"{end - start:.2f}"]
-    cmd += ["-i", stream_url, "-vn", "-c:a", "aac", "-b:a", "64k", "-ac", "1", str(dest)]
+    cmd += [*_hls_input_opts(stream_url), "-i", stream_url, "-vn", "-c:a", "aac", "-b:a", "64k", "-ac", "1", str(dest)]
     subprocess.run(cmd, check=True, timeout=4 * 3600)
-    if end is None:
-        end = start + _probe_duration(dest)
+    got = _probe_duration(dest)
+    if end is None or got < end - start - 60:
+        # trust the audio we actually have, so the next run continues from there
+        end = start + got
     return AudioChunk(path=dest, start=start, end=end, finished=finished)
+
+
+def _hls_input_opts(url: str) -> list[str]:
+    """For a still-growing (live) HLS playlist ffmpeg starts at the live edge and records in
+    real time; start from the first segment instead so -ss/-t address VOD time."""
+    return ["-live_start_index", "0"] if ".m3u8" in url else []
 
 
 def _probe_duration(path: Path) -> float:
@@ -246,7 +254,7 @@ def grab_frames(vod_url: str, times: list[float], dest_dir: Path) -> list[Path |
         out = dest_dir / f"frame{i:02d}.jpg"
         try:
             subprocess.run(
-                ["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.2f}", "-i", stream_url,
+                ["ffmpeg", "-v", "error", "-y", *_hls_input_opts(stream_url), "-ss", f"{t:.2f}", "-i", stream_url,
                  "-frames:v", "1", "-vf", "scale=640:-2", "-q:v", "5", str(out)],
                 check=True, timeout=90,
             )

@@ -2,7 +2,9 @@ name: Clips
 
 on:
   schedule:
-    - cron: "17 */3 * * *"   # every 3 hours (saves Actions minutes); picks up VODs that finished since the last run
+    # hourly: GitHub drops some scheduled runs, and a run that finds nothing new ends in a few minutes;
+    # the concurrency group below keeps runs from overlapping
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       streamer:

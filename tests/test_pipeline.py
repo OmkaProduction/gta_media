@@ -311,7 +311,8 @@ def test_long_vod_is_cut_into_6h_chunks(monkeypatch, tmp_path):
     cmds = []
     monkeypatch.setattr(sources.subprocess, "run", lambda cmd, **kw: (cmds.append(cmd), R())[1])
     monkeypatch.setattr(sources, "hls_status", lambda url: (True, 20 * 3600.0))  # finished 20 h VOD
-    monkeypatch.setattr(sources, "_probe_duration", lambda path: 2 * 3600.0)
+    probed = iter([6 * 3600.0, 2 * 3600.0])
+    monkeypatch.setattr(sources, "_probe_duration", lambda path: next(probed))
     chunk = sources.download_audio("https://t/1", tmp_path / "a.m4a", start=3600.0)
     assert (chunk.start, chunk.end, chunk.finished) == (3600.0, 3600.0 + 6 * 3600, False)
     ff = cmds[-1]
@@ -378,3 +379,19 @@ def test_publish_is_off_without_config_or_key(tmp_path):
     assert publish.publish(tmp_path, "r", {"enabled": False, "channels": [{"id": "a", "service": "youtube"}]}, "k", create=boom) == 0
     assert publish.publish(tmp_path, "r", {"enabled": True, "base_url": "x", "channels": [{"id": "a", "service": "youtube"}]}, "", create=boom) == 0
     assert publish.load_config()["enabled"] is False
+
+
+def test_live_hls_is_read_from_the_start_and_short_audio_is_trusted(monkeypatch, tmp_path):
+    from clipper import sources
+
+    class R:
+        stdout = "https://x/live.m3u8\n"
+
+    cmds = []
+    monkeypatch.setattr(sources.subprocess, "run", lambda cmd, **kw: (cmds.append(cmd), R())[1])
+    monkeypatch.setattr(sources, "hls_status", lambda url: (False, 10 * 3600.0))  # live, 10 h so far
+    monkeypatch.setattr(sources, "_probe_duration", lambda path: 3 * 3600.0)     # only 3 h came down
+    chunk = sources.download_audio("https://t/9", tmp_path / "a.m4a")
+    ff = cmds[-1]
+    assert ff[ff.index("-live_start_index") + 1] == "0" and ff.index("-live_start_index") < ff.index("-i")
+    assert (chunk.start, chunk.end, chunk.finished) == (0.0, 3 * 3600.0, False)
