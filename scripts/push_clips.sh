@@ -14,6 +14,7 @@ rm -rf "$folder" && mkdir "$folder"
 find "$src" -type f \( -name '*.mp4' -o -name '*.txt' -o -name '*.md' \) -exec cp {} "$folder/" \;
 ls -la "$folder"
 git add "$folder"
+git diff --cached --quiet && { echo "nothing new"; exit 0; }
 git commit -q -m "Clips: $folder"
 for i in 1 2 3; do
   git push -q origin clips && exit 0
