@@ -222,6 +222,37 @@ def is_unfinished_hls(url: str) -> bool:
     return not hls_status(url)[0]
 
 
+def grab_frames(vod_url: str, times: list[float], dest_dir: Path) -> list[Path | None]:
+    """One small still per time (VOD seconds), so the clip picker can see what is on screen.
+
+    Frames that cannot be fetched are None; selection then relies on the transcript alone.
+    """
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        res = subprocess.run(
+            ["yt-dlp", "-f", "worst[height>=360][vcodec!=none]/worst[vcodec!=none]/worst", "-g", vod_url],
+            check=True, capture_output=True, text=True, timeout=120,
+        )
+        stream_url = res.stdout.strip().splitlines()[0]
+    except Exception as exc:
+        print(f"could not get a video stream for frames ({exc})")
+        return [None] * len(times)
+    frames: list[Path | None] = []
+    for i, t in enumerate(times):
+        out = dest_dir / f"frame{i:02d}.jpg"
+        try:
+            subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.2f}", "-i", stream_url,
+                 "-frames:v", "1", "-vf", "scale=640:-2", "-q:v", "5", str(out)],
+                check=True, timeout=90,
+            )
+            frames.append(out if out.exists() and out.stat().st_size else None)
+        except Exception as exc:
+            print(f"no frame at {t:.0f}s ({exc})")
+            frames.append(None)
+    return frames
+
+
 def download_section(vod_url: str, start: float, end: float, dest: Path) -> Path:
     """Download only [start, end] of the VOD in up to 1080p."""
     dest.parent.mkdir(parents=True, exist_ok=True)

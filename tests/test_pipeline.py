@@ -319,3 +319,19 @@ def test_long_vod_is_cut_into_6h_chunks(monkeypatch, tmp_path):
 
     chunk = sources.download_audio("https://t/1", tmp_path / "a.m4a", start=18 * 3600.0)
     assert chunk.finished is True and "-t" not in cmds[-1]   # last piece runs to the end
+
+
+def test_frames_are_sent_to_claude(monkeypatch, streamers, tmp_path):
+    import anthropic
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    calls = []
+    monkeypatch.setattr(anthropic, "Anthropic", _fake_client(_Resp(json.dumps({"clips": []})), calls))
+    frame = tmp_path / "f.jpg"
+    frame.write_bytes(b"\xff\xd8jpeg")
+    cands = [Candidate(peak=500, start=455, end=525, score=10), Candidate(peak=900, start=860, end=930, score=8)]
+    assert select.select_clips(streamers["lacy"], cands, [], 2, frames=[frame, None]) == []
+    content = calls[0]["messages"][0]["content"]
+    assert [b["type"] for b in content].count("image") == 1
+    assert "no frame available" in content[-1]["text"]
+    assert "GTA 6 content" in calls[0]["system"]

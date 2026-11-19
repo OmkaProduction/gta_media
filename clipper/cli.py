@@ -56,7 +56,9 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
     candidates = [analysis.Candidate(c.peak + chunk.start, c.start + chunk.start, c.end + chunk.start, c.score)
                   for c in candidates]
 
-    plans = select.select_clips(streamer, candidates, words, streamer.clips_per_vod)
+    frames = sources.grab_frames(vod.download_url, [c.peak for c in candidates], vod_dir / "frames")
+    print(f"[{streamer.id}] {sum(f is not None for f in frames)}/{len(frames)} frames for the clip picker")
+    plans = select.select_clips(streamer, candidates, words, streamer.clips_per_vod, frames=frames)
     print(f"[{streamer.id}] selected {len(plans)} clips")
 
     written = []

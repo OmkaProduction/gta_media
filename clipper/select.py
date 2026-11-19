@@ -6,9 +6,11 @@ key (or if the call fails) we fall back to the loudest candidates.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from .analysis import Candidate
 from .config import Streamer
@@ -52,6 +54,11 @@ SCHEMA = {
 
 SYSTEM = """You are the editor of a short-form channel that clips GTA 6 livestreams for paid clipping campaigns.
 You get loud moments from one stream, each with a timestamped transcript. Pick the moments most likely to go viral as 15-60 second vertical clips.
+
+Every clip must be GTA 6 content: GTA 6 gameplay on screen, or the streamer reacting to what just happened in GTA 6.
+Each candidate comes with a still frame from its loudest second. Skip any candidate whose frame shows something else
+(a browser, a sports game, another game, a just-chatting or loading screen) or whose talk is clearly not about GTA 6,
+however funny it is. Campaigns only pay for GTA 6 clips, so return no clip rather than an off-topic one.
 
 What works: a clear setup and payoff, a strong genuine reaction, a funny line, a fail or glitch, a surprising game detail, an exchange with chat.
 Skip: moments that need context the viewer does not have, dead air, menu screens, long story cutscenes, ending or major story spoilers, NSFW content, and anything that makes the streamer look bad.
@@ -114,7 +121,24 @@ def fallback_plans(streamer: Streamer, candidates: list[Candidate], words: list[
     return sorted(plans, key=lambda p: p.start)
 
 
-def select_clips(streamer: Streamer, candidates: list[Candidate], words: list[Word], count: int) -> list[ClipPlan]:
+def _content(prompt: str, frames: list[Path | None] | None) -> list[dict] | str:
+    if not frames or not any(frames):
+        return prompt
+    blocks: list[dict] = [{"type": "text", "text": prompt}]
+    for i, frame in enumerate(frames):
+        if frame is None:
+            blocks.append({"type": "text", "text": f"Candidate {i}: no frame available."})
+            continue
+        blocks.append({"type": "text", "text": f"Candidate {i}: frame at its loudest second."})
+        blocks.append({"type": "image", "source": {
+            "type": "base64", "media_type": "image/jpeg",
+            "data": base64.b64encode(Path(frame).read_bytes()).decode("ascii"),
+        }})
+    return blocks
+
+
+def select_clips(streamer: Streamer, candidates: list[Candidate], words: list[Word], count: int,
+                 frames: list[Path | None] | None = None) -> list[ClipPlan]:
     if not candidates:
         return []
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -132,7 +156,7 @@ def select_clips(streamer: Streamer, candidates: list[Candidate], words: list[Wo
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
             output_config={"effort": "medium", "format": {"type": "json_schema", "schema": SCHEMA}},
-            messages=[{"role": "user", "content": _prompt(streamer, candidates, words, count)}],
+            messages=[{"role": "user", "content": _content(_prompt(streamer, candidates, words, count), frames)}],
         )
     except (anthropic.RateLimitError, anthropic.APIConnectionError, anthropic.InternalServerError) as exc:
         print(f"Claude unavailable ({exc}); using loudness-only selection")
