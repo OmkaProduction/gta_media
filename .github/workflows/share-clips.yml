@@ -23,26 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           run-id: ${{ inputs.run_id }}
           github-token: ${{ github.token }}
           path: artifact
 
+
       - name: Push to the clips branch
         env:
-          RUN_ID: ${{ inputs.run_id }}
-          REPO: ${{ github.repository }}
-          TOKEN: ${{ github.token }}
-        run: |
-          git init -q clips && cd clips
-          git config user.name "clipper-bot"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPO}.git"
-          if git fetch -q --depth 1 origin clips; then git checkout -q -b clips FETCH_HEAD; else git checkout -q --orphan clips; fi
-          rm -rf "run-${RUN_ID}" && mkdir "run-${RUN_ID}"
-          find ../artifact -type f \( -name '*.mp4' -o -name '*.txt' -o -name '*.md' \) -exec cp {} "run-${RUN_ID}/" \;
-          ls -la "run-${RUN_ID}"
-          git add "run-${RUN_ID}"
-          git commit -q -m "Clips from run ${RUN_ID}"
-          git push -q origin clips
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/push_clips.sh artifact "run-${{ inputs.run_id }}"

@@ -68,6 +68,13 @@ jobs:
           path: out/
           retention-days: 14
 
+      - name: Copy clips to the clips branch
+        if: always() && hashFiles('out/*.mp4') != ''
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/push_clips.sh out "run-${{ github.run_id }}"
+
       - name: Remember processed VODs
         if: always()
         run: |
