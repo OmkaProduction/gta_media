@@ -378,7 +378,7 @@ def test_publish_is_off_without_config_or_key(tmp_path):
     boom = lambda k, d: (_ for _ in ()).throw(AssertionError("should not post"))
     assert publish.publish(tmp_path, "r", {"enabled": False, "channels": [{"id": "a", "service": "youtube"}]}, "k", create=boom) == 0
     assert publish.publish(tmp_path, "r", {"enabled": True, "base_url": "x", "channels": [{"id": "a", "service": "youtube"}]}, "", create=boom) == 0
-    assert publish.load_config()["enabled"] is False
+    assert publish.load_config()["channels"][0]["service"] == "youtube"
 
 
 def test_live_hls_is_read_from_the_start_and_short_audio_is_trusted(monkeypatch, tmp_path):

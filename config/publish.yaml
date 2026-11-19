@@ -3,11 +3,11 @@
 # Needs the repo secret BUFFER_API_KEY. Nothing is posted while `enabled` is false or `channels` is empty.
 
 buffer:
-  enabled: false
+  enabled: true
   # direct public file URLs: the repo must be public for raw.githubusercontent.com links to work
   base_url: https://raw.githubusercontent.com/OmkaProduction/gta_media/clips
   mode: addToQueue          # posts go to each channel's queue slots set in Buffer
-  channels: []
-  # - id: 0123456789abcdef01234567   # Buffer channel id
-  #   service: youtube               # youtube | tiktok | instagram | facebook
-  #   streamers: [dom, lacy, clix]   # optional: only these streamers' clips (default: all)
+  channels:
+    - id: 6aff8bbaece6dfde5f285eb4   # YouTube "Future Shock" (one shared channel for all campaign clips)
+      service: youtube
+  # more: - id: <Buffer channel id>, service: tiktok | instagram | facebook, streamers: [dom] (optional filter)
