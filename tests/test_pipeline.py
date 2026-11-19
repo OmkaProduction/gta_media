@@ -300,3 +300,22 @@ def test_title_filter_skips_non_gta6_vods(monkeypatch, streamers):
                sources.Vod("lacy", "b", "u", "GTA 6 EARLY ACCESS marathon", None, None)]
     monkeypatch.setattr(sources, "_list_with_ytdlp", lambda s, limit: entries)
     assert [v.vod_id for v in sources.list_new_vods(streamers["lacy"], set())] == ["b"]
+
+
+def test_long_vod_is_cut_into_6h_chunks(monkeypatch, tmp_path):
+    from clipper import sources
+
+    class R:
+        stdout = "https://x/v.m3u8\n"
+
+    cmds = []
+    monkeypatch.setattr(sources.subprocess, "run", lambda cmd, **kw: (cmds.append(cmd), R())[1])
+    monkeypatch.setattr(sources, "hls_status", lambda url: (True, 20 * 3600.0))  # finished 20 h VOD
+    monkeypatch.setattr(sources, "_probe_duration", lambda path: 2 * 3600.0)
+    chunk = sources.download_audio("https://t/1", tmp_path / "a.m4a", start=3600.0)
+    assert (chunk.start, chunk.end, chunk.finished) == (3600.0, 3600.0 + 6 * 3600, False)
+    ff = cmds[-1]
+    assert ff[ff.index("-t") + 1] == f"{6 * 3600:.2f}"
+
+    chunk = sources.download_audio("https://t/1", tmp_path / "a.m4a", start=18 * 3600.0)
+    assert chunk.finished is True and "-t" not in cmds[-1]   # last piece runs to the end

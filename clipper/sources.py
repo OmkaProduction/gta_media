@@ -137,6 +137,7 @@ class AudioChunk:
 
 MIN_LIVE_CHUNK = 30 * 60   # wait for at least 30 new minutes of a live VOD
 LIVE_SAFETY = 120          # stay 2 min behind the live edge
+MAX_CHUNK = 6 * 3600       # at most 6 h of audio per run, so one run fits the job's time limit
 
 
 def download_audio(vod_url: str, dest: Path, start: float = 0.0) -> AudioChunk:
@@ -149,6 +150,8 @@ def download_audio(vod_url: str, dest: Path, start: float = 0.0) -> AudioChunk:
 
     A VOD whose broadcast is still live (24/7 marathons) is processed in chunks:
     each run takes what was added since the last run, if that is at least 30 min.
+    Long VODs (marathons, finished or not) are taken at most 6 h per run; the next run
+    continues where this one stopped.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest = dest.with_suffix(".m4a")
@@ -163,6 +166,9 @@ def download_audio(vod_url: str, dest: Path, start: float = 0.0) -> AudioChunk:
         end = duration - LIVE_SAFETY
         if end - start < MIN_LIVE_CHUNK:
             raise StillLive(vod_url)
+    if duration and (end if end is not None else duration) - start > MAX_CHUNK:
+        end = start + MAX_CHUNK
+        finished = False  # more of this VOD is left for the next run
     cmd = ["ffmpeg", "-v", "error", "-y"]
     if start:
         cmd += ["-ss", f"{start:.2f}"]
