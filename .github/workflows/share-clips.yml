@@ -1,0 +1,48 @@
+name: Share clips
+
+# Copies the clips of a finished "Clips" run from its artifact to the `clips` branch
+# (folder run-<run id>/), so they can be fetched with plain git and shared outside GitHub.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id of a finished Clips run"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: share-clips
+  cancel-in-progress: false
+
+jobs:
+  share:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          path: artifact
+
+      - name: Push to the clips branch
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -q clips && cd clips
+          git config user.name "clipper-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPO}.git"
+          if git fetch -q --depth 1 origin clips; then git checkout -q -b clips FETCH_HEAD; else git checkout -q --orphan clips; fi
+          rm -rf "run-${RUN_ID}" && mkdir "run-${RUN_ID}"
+          find ../artifact -type f \( -name '*.mp4' -o -name '*.txt' -o -name '*.md' \) -exec cp {} "run-${RUN_ID}/" \;
+          ls -la "run-${RUN_ID}"
+          git add "run-${RUN_ID}"
+          git commit -q -m "Clips from run ${RUN_ID}"
+          git push -q origin clips
