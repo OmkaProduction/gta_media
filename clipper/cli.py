@@ -42,6 +42,9 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
     print(f"[{streamer.id}] {vod.title!r} ({vod.url}) from {start / 3600:.1f} h")
 
     chunk = sources.download_audio(vod.download_url, vod_dir / "audio.m4a", start=start)
+    if chunk.empty:
+        print(f"[{streamer.id}] nothing left after {start / 3600:.1f} h; marking the VOD done")
+        return [], chunk
     audio = chunk.path
     loud = analysis.loudness_per_second(audio)
     candidates = analysis.find_candidates(loud, max_candidates=max(12, streamer.clips_per_vod * 4))

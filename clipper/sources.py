@@ -133,6 +133,7 @@ class AudioChunk:
     start: float      # VOD second where this audio begins
     end: float        # VOD second where it ends
     finished: bool    # the whole VOD is covered (broadcast over)
+    empty: bool = False  # nothing left to process
 
 
 MIN_LIVE_CHUNK = 30 * 60   # wait for at least 30 new minutes of a live VOD
@@ -161,6 +162,9 @@ def download_audio(vod_url: str, dest: Path, start: float = 0.0) -> AudioChunk:
     )
     stream_url = res.stdout.strip().splitlines()[-1]
     finished, duration = hls_status(stream_url)
+    if finished and duration and start >= duration - 60:
+        # everything was processed already (e.g. the saved offset reached the end)
+        return AudioChunk(path=dest, start=start, end=max(start, duration), finished=True, empty=True)
     end = None
     if not finished:
         end = duration - LIVE_SAFETY

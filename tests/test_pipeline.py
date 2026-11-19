@@ -335,3 +335,15 @@ def test_frames_are_sent_to_claude(monkeypatch, streamers, tmp_path):
     assert [b["type"] for b in content].count("image") == 1
     assert "no frame available" in content[-1]["text"]
     assert "GTA 6 content" in calls[0]["system"]
+
+
+def test_vod_already_processed_to_the_end(monkeypatch, tmp_path):
+    from clipper import sources
+
+    class R:
+        stdout = "https://x/v.m3u8\n"
+
+    monkeypatch.setattr(sources.subprocess, "run", lambda cmd, **kw: R())
+    monkeypatch.setattr(sources, "hls_status", lambda url: (True, 5 * 3600.0))
+    chunk = sources.download_audio("https://t/1", tmp_path / "a.m4a", start=6 * 3600.0)
+    assert chunk.empty and chunk.finished
