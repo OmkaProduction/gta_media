@@ -347,3 +347,34 @@ def test_vod_already_processed_to_the_end(monkeypatch, tmp_path):
     monkeypatch.setattr(sources, "hls_status", lambda url: (True, 5 * 3600.0))
     chunk = sources.download_audio("https://t/1", tmp_path / "a.m4a", start=6 * 3600.0)
     assert chunk.empty and chunk.finished
+
+
+def test_publish_queues_each_clip_on_matching_channels(tmp_path):
+    from clipper import publish
+
+    (tmp_path / "20261119-dom-01-shark.mp4").write_bytes(b"x")
+    (tmp_path / "20261119-dom-01-shark.txt").write_text("Dom vs shark\n\n#dasgasdom3 #GTA6\nWatch Dom live", encoding="utf-8")
+    (tmp_path / "20261119-lacy-01-x.mp4").write_bytes(b"x")
+    config = {"enabled": True, "base_url": "https://raw.example/clips/", "mode": "addToQueue", "channels": [
+        {"id": "a" * 24, "service": "youtube"},
+        {"id": "b" * 24, "service": "tiktok", "streamers": ["dom"]},
+    ]}
+    sent = []
+    assert publish.publish(tmp_path, "run-1", config, "key", create=lambda k, d: sent.append(d) or "p1") == 0
+    assert len(sent) == 3   # dom on both channels, lacy only on YouTube
+    yt = sent[0]
+    assert yt["assets"][0]["video"]["url"] == "https://raw.example/clips/run-1/20261119-dom-01-shark.mp4"
+    assert yt["metadata"]["youtube"] == {"title": "Dom vs shark", "categoryId": "20",
+                                         "privacy": "public", "madeForKids": False}
+    assert yt["text"].startswith("Dom vs shark") and yt["mode"] == "addToQueue"
+    assert sent[1]["metadata"]["tiktok"]["title"] == "Dom vs shark"
+
+
+def test_publish_is_off_without_config_or_key(tmp_path):
+    from clipper import publish
+
+    (tmp_path / "20261119-dom-01-x.mp4").write_bytes(b"x")
+    boom = lambda k, d: (_ for _ in ()).throw(AssertionError("should not post"))
+    assert publish.publish(tmp_path, "r", {"enabled": False, "channels": [{"id": "a", "service": "youtube"}]}, "k", create=boom) == 0
+    assert publish.publish(tmp_path, "r", {"enabled": True, "base_url": "x", "channels": [{"id": "a", "service": "youtube"}]}, "", create=boom) == 0
+    assert publish.load_config()["enabled"] is False
