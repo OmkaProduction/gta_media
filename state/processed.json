@@ -6,9 +6,9 @@
     "url": "https://kick.com/dasgasd3m/videos/32d7bbef-dfdb-443f-b49b-0f1de52aabd9"
   },
   "dom:baa12604-007b-4bfa-b0d3-7a61078f4670": {
-    "finished": false,
-    "offset": 59040.0,
-    "processed": "2026-11-18T21:23:02.862941+00:00",
+    "finished": true,
+    "offset": 59191.2,
+    "processed": "2026-11-19T12:01:22.010730+00:00",
     "url": "https://kick.com/dasgasd3m/videos/baa12604-007b-4bfa-b0d3-7a61078f4670"
   },
   "lacy:v2930061578": {
@@ -20,5 +20,11 @@
   "lacy:v2930787454": {
     "processed": "2026-11-18T23:10:14.334663+00:00",
     "url": "https://www.twitch.tv/videos/2930787454"
+  },
+  "lacy:v2932194507": {
+    "finished": false,
+    "offset": 21600.0,
+    "processed": "2026-11-19T15:15:05.646336+00:00",
+    "url": "https://www.twitch.tv/videos/2932194507"
   }
 }
