@@ -11,11 +11,14 @@ import os
 import re
 import sys
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
 
 from .config import ROOT
+
+STATE = ROOT / "state" / "processed.json"
 
 CONFIG = ROOT / "config" / "publish.yaml"
 API_URL = "https://api.buffer.com"
@@ -79,8 +82,21 @@ def _create(api_key: str, data: dict) -> str:
     return result["post"]["id"]
 
 
+def rank(clip: Path) -> tuple:
+    """Best clips first: the clip number is the picker's rank within its VOD."""
+    m = re.match(r"\d{8}-[a-z0-9_]+-(\d{2})-", clip.name)
+    return (int(m.group(1)) if m else 99, clip.name)
+
+
+def _load_state(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8") or "{}")
+    except FileNotFoundError:
+        return {}
+
+
 def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str | None = None,
-            create=_create) -> int:
+            create=_create, state_path: Path = STATE, today: str | None = None) -> int:
     config = load_config() if config is None else config
     api_key = api_key if api_key is not None else os.environ.get("BUFFER_API_KEY", "")
     channels = config.get("channels") or []
@@ -91,8 +107,21 @@ def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str
         print("BUFFER_API_KEY not set: not publishing")
         return 0
     base = config["base_url"].rstrip("/")
+    # Buffer posts 2 a day from the channel's posting schedule; queueing every clip would
+    # grow the queue without end, so at most per_day clips (the best ones) are queued daily.
+    per_day = int(config.get("per_day") or 0)
+    today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    state = _load_state(state_path)
+    key = f"published:{today}"
+    done_today = int(state.get(key, 0))
+    clips = sorted(out_dir.glob("*.mp4"), key=rank)
+    if per_day:
+        room = max(per_day - done_today, 0)
+        if len(clips) > room:
+            print(f"{done_today} of {per_day} clips already queued today: queueing {room} of {len(clips)}")
+        clips = clips[:room]
     queued = failed = 0
-    for clip in sorted(out_dir.glob("*.mp4")):
+    for clip in clips:
         txt = clip.with_suffix(".txt")
         caption = txt.read_text(encoding="utf-8").strip() if txt.exists() else ""
         streamer = streamer_of(clip.name)
@@ -108,6 +137,11 @@ def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str
             except Exception as exc:
                 print(f"could not queue {clip.name} on {ch['service']}: {exc}", file=sys.stderr)
                 failed += 1
+        if per_day:
+            done_today += 1
+    if per_day and clips:
+        state[key] = done_today
+        state_path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"{queued} posts queued in Buffer, {failed} failed")
     return 1 if failed and not queued else 0
 

@@ -395,3 +395,27 @@ def test_live_hls_is_read_from_the_start_and_short_audio_is_trusted(monkeypatch,
     ff = cmds[-1]
     assert ff[ff.index("-live_start_index") + 1] == "0" and ff.index("-live_start_index") < ff.index("-i")
     assert (chunk.start, chunk.end, chunk.finished) == (0.0, 3 * 3600.0, False)
+
+
+def test_publish_queues_only_the_daily_limit(tmp_path):
+    from clipper import publish
+    out = tmp_path / "out"
+    out.mkdir()
+    for name in ["20261120-dom-02-b", "20261120-lacy-01-a", "20261120-dom-01-c", "20261120-lacy-03-d"]:
+        (out / f"{name}.mp4").write_bytes(b"x")
+    state = tmp_path / "state.json"
+    state.write_text('{"lacy:v1": {"finished": true}}')
+    sent = []
+    config = {"enabled": True, "base_url": "https://x/clips", "per_day": 2,
+              "channels": [{"id": "a" * 24, "service": "youtube"}]}
+    create = lambda key, data: sent.append(data["assets"][0]["video"]["url"]) or "id"
+    publish.publish(out, "run-1", config=config, api_key="k", create=create,
+                    state_path=state, today="2026-11-20")
+    assert sent == ["https://x/clips/run-1/20261120-dom-01-c.mp4",
+                    "https://x/clips/run-1/20261120-lacy-01-a.mp4"]
+    import json
+    assert json.loads(state.read_text())["published:2026-11-20"] == 2
+    assert json.loads(state.read_text())["lacy:v1"] == {"finished": True}
+    publish.publish(out, "run-2", config=config, api_key="k", create=create,
+                    state_path=state, today="2026-11-20")
+    assert len(sent) == 2
