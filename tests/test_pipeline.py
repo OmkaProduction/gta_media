@@ -419,3 +419,14 @@ def test_publish_fills_fixed_posting_times(tmp_path):
     assert saved["slot:2026-11-21T21:00"] == "20261120-dom-01-c.mp4" and saved["lacy:v1"] == {"finished": True}
     publish.publish(out, "run-2", config=config, api_key="k", create=create, state_path=state, now=now)
     assert len(sent) == 1
+
+
+def test_publish_entries_in_state_do_not_break_vod_listing(monkeypatch, tmp_path):
+    state = tmp_path / "state.json"
+    state.write_text(json.dumps({"published:2026-11-20": 2, "slot:2026-11-21T12:00": "a.mp4",
+                                 "lacy:1": {"finished": True}}))
+    seen = []
+    monkeypatch.setattr(cli.sources, "list_new_vods", lambda s, processed: seen.append(set(processed)) or [])
+    monkeypatch.setattr(cli, "STATE_FILE", state)
+    assert cli.main(["--streamer", "lacy", "--out", str(tmp_path / "o")]) == 0
+    assert seen == [{"lacy:1"}]

@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             vods = [sources.Vod(streamer.id, _slug(args.vod_url)[-30:], args.vod_url, args.vod_url, None, None)]
         else:
             try:
-                finished = {k for k, v in state.items() if v.get("finished", True)}
+                finished = {k for k, v in state.items() if isinstance(v, dict) and v.get("finished", True)}
                 vods = sources.list_new_vods(streamer, finished)
             except Exception as exc:
                 print(f"[{streamer.id}] could not list VODs: {exc}", file=sys.stderr)
