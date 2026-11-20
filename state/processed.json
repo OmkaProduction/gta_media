@@ -6,9 +6,9 @@
     "url": "https://kick.com/dasgasd3m/videos/32d7bbef-dfdb-443f-b49b-0f1de52aabd9"
   },
   "dom:aacf8cb5-681b-4f63-91a8-37f52197a4a4": {
-    "finished": false,
-    "offset": 43200.0,
-    "processed": "2026-11-20T04:12:29.035254+00:00",
+    "finished": true,
+    "offset": 50566.5,
+    "processed": "2026-11-20T13:04:58.271525+00:00",
     "url": "https://kick.com/dasgasd3m/videos/aacf8cb5-681b-4f63-91a8-37f52197a4a4"
   },
   "dom:baa12604-007b-4bfa-b0d3-7a61078f4670": {
@@ -35,8 +35,8 @@
   },
   "lacy:v2933767012": {
     "finished": false,
-    "offset": 43200.0,
-    "processed": "2026-11-20T04:25:15.281872+00:00",
+    "offset": 64800.0,
+    "processed": "2026-11-20T13:16:38.260454+00:00",
     "url": "https://www.twitch.tv/videos/2933767012"
   }
 }
