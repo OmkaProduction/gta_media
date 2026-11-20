@@ -1,0 +1,51 @@
+name: Queue clips
+
+# Queues the clips of one folder on the `clips` branch (run-<run id>) in Buffer,
+# e.g. clips made before publishing was set up. The daily limit in config/publish.yaml applies.
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: "Folder on the clips branch, e.g. run-44739381862"
+        required: true
+
+concurrency:
+  group: clipper
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: pip install pyyaml
+
+      - name: Get the clips
+        env:
+          FOLDER: ${{ inputs.folder }}
+        run: |
+          git fetch -q origin clips
+          mkdir out
+          git archive FETCH_HEAD "$FOLDER" | tar -x --strip-components=1 -C out
+          ls out
+
+      - name: Queue clips in Buffer
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          FOLDER: ${{ inputs.folder }}
+        run: python -m clipper.publish out "$FOLDER"
+
+      - name: Remember queued clips
+        if: always()
+        run: scripts/save_state.sh
