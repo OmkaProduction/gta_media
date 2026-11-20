@@ -11,7 +11,8 @@ import os
 import re
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import yaml
@@ -43,7 +44,7 @@ def streamer_of(filename: str) -> str:
     return m.group(1) if m else ""
 
 
-def post_input(channel: dict, video_url: str, caption: str) -> dict:
+def post_input(channel: dict, video_url: str, caption: str, due_at: str | None = None) -> dict:
     title = caption.splitlines()[0].strip() if caption.strip() else "GTA 6 clip"
     service = channel["service"]
     metadata: dict = {}
@@ -65,6 +66,9 @@ def post_input(channel: dict, video_url: str, caption: str) -> dict:
     }
     if metadata:
         data["metadata"] = metadata
+    if due_at:
+        data["mode"] = "customScheduled"
+        data["dueAt"] = due_at
     return data
 
 
@@ -95,8 +99,25 @@ def _load_state(path: Path) -> dict:
         return {}
 
 
+def free_slots(config: dict, state: dict, now: datetime) -> list[datetime]:
+    """Posting times from config `times` (local `timezone`) that are still free, over the
+    next `days_ahead` days. A slot counts as taken once state holds `slot:<local time>`."""
+    tz = ZoneInfo(config.get("timezone") or "Europe/Warsaw")
+    local_now = now.astimezone(tz)
+    earliest = local_now + timedelta(minutes=int(config.get("min_lead_minutes", 20)))
+    slots = []
+    for day in range(int(config.get("days_ahead", 2)) + 1):
+        date = (local_now + timedelta(days=day)).date()
+        for t in config.get("times") or []:
+            hh, mm = (int(x) for x in t.split(":"))
+            at = datetime(date.year, date.month, date.day, hh, mm, tzinfo=tz)
+            if at >= earliest and f"slot:{at:%Y-%m-%dT%H:%M}" not in state:
+                slots.append(at)
+    return sorted(slots)
+
+
 def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str | None = None,
-            create=_create, state_path: Path = STATE, today: str | None = None) -> int:
+            create=_create, state_path: Path = STATE, now: datetime | None = None) -> int:
     config = load_config() if config is None else config
     api_key = api_key if api_key is not None else os.environ.get("BUFFER_API_KEY", "")
     channels = config.get("channels") or []
@@ -107,40 +128,37 @@ def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str
         print("BUFFER_API_KEY not set: not publishing")
         return 0
     base = config["base_url"].rstrip("/")
-    # Buffer posts 2 a day from the channel's posting schedule; queueing every clip would
-    # grow the queue without end, so at most per_day clips (the best ones) are queued daily.
-    per_day = int(config.get("per_day") or 0)
-    today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    state = _load_state(state_path)
-    key = f"published:{today}"
-    done_today = int(state.get(key, 0))
     clips = sorted(out_dir.glob("*.mp4"), key=rank)
-    if per_day:
-        room = max(per_day - done_today, 0)
-        if len(clips) > room:
-            print(f"{done_today} of {per_day} clips already queued today: queueing {room} of {len(clips)}")
-        clips = clips[:room]
+    # With `times`, each clip gets the next free fixed posting time, so posts go out at the
+    # same hours every day and the backlog never grows past `days_ahead` days.
+    state = _load_state(state_path)
+    slots = free_slots(config, state, now or datetime.now(timezone.utc)) if config.get("times") else None
+    if slots is not None:
+        if len(clips) > len(slots):
+            print(f"{len(slots)} free posting times: queueing {len(slots)} of {len(clips)} clips")
+        clips = clips[:len(slots)]
     queued = failed = 0
-    for clip in clips:
+    for i, clip in enumerate(clips):
         txt = clip.with_suffix(".txt")
         caption = txt.read_text(encoding="utf-8").strip() if txt.exists() else ""
         streamer = streamer_of(clip.name)
         url = f"{base}/{folder}/{clip.name}"
+        due = slots[i] if slots is not None else None
         for ch in channels:
             if ch.get("streamers") and streamer not in ch["streamers"]:
                 continue
             try:
                 post_id = create(api_key, post_input({**ch, "mode": ch.get("mode") or config.get("mode")},
-                                                     url, caption))
-                print(f"queued {clip.name} on {ch['service']} ({post_id})")
+                                                     url, caption,
+                                                     due.isoformat() if due else None))
+                print(f"queued {clip.name} on {ch['service']} for {due or 'the queue'} ({post_id})")
                 queued += 1
             except Exception as exc:
                 print(f"could not queue {clip.name} on {ch['service']}: {exc}", file=sys.stderr)
                 failed += 1
-        if per_day:
-            done_today += 1
-    if per_day and clips:
-        state[key] = done_today
+        if due:
+            state[f"slot:{due:%Y-%m-%dT%H:%M}"] = clip.name
+    if slots is not None and clips:
         state_path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"{queued} posts queued in Buffer, {failed} failed")
     return 1 if failed and not queued else 0

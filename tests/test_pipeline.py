@@ -397,25 +397,25 @@ def test_live_hls_is_read_from_the_start_and_short_audio_is_trusted(monkeypatch,
     assert (chunk.start, chunk.end, chunk.finished) == (0.0, 3 * 3600.0, False)
 
 
-def test_publish_queues_only_the_daily_limit(tmp_path):
+def test_publish_fills_fixed_posting_times(tmp_path):
+    import json
+    from datetime import datetime, timezone
     from clipper import publish
     out = tmp_path / "out"
     out.mkdir()
     for name in ["20261120-dom-02-b", "20261120-lacy-01-a", "20261120-dom-01-c", "20261120-lacy-03-d"]:
         (out / f"{name}.mp4").write_bytes(b"x")
     state = tmp_path / "state.json"
-    state.write_text('{"lacy:v1": {"finished": true}}')
+    state.write_text('{"lacy:v1": {"finished": true}, "slot:2026-11-21T12:00": "old.mp4"}')
     sent = []
-    config = {"enabled": True, "base_url": "https://x/clips", "per_day": 2,
+    config = {"enabled": True, "base_url": "https://x/clips", "timezone": "Europe/Warsaw",
+              "times": ["12:00", "21:00"], "days_ahead": 1,
               "channels": [{"id": "a" * 24, "service": "youtube"}]}
-    create = lambda key, data: sent.append(data["assets"][0]["video"]["url"]) or "id"
-    publish.publish(out, "run-1", config=config, api_key="k", create=create,
-                    state_path=state, today="2026-11-20")
-    assert sent == ["https://x/clips/run-1/20261120-dom-01-c.mp4",
-                    "https://x/clips/run-1/20261120-lacy-01-a.mp4"]
-    import json
-    assert json.loads(state.read_text())["published:2026-11-20"] == 2
-    assert json.loads(state.read_text())["lacy:v1"] == {"finished": True}
-    publish.publish(out, "run-2", config=config, api_key="k", create=create,
-                    state_path=state, today="2026-11-20")
-    assert len(sent) == 2
+    create = lambda key, data: sent.append((data["assets"][0]["video"]["url"], data["mode"], data["dueAt"])) or "id"
+    now = datetime(2026, 11, 20, 20, 50, tzinfo=timezone.utc)  # 21:50 in Warsaw: today's slots are gone
+    publish.publish(out, "run-1", config=config, api_key="k", create=create, state_path=state, now=now)
+    assert sent == [("https://x/clips/run-1/20261120-dom-01-c.mp4", "customScheduled", "2026-11-21T21:00:00+01:00")]
+    saved = json.loads(state.read_text())
+    assert saved["slot:2026-11-21T21:00"] == "20261120-dom-01-c.mp4" and saved["lacy:v1"] == {"finished": True}
+    publish.publish(out, "run-2", config=config, api_key="k", create=create, state_path=state, now=now)
+    assert len(sent) == 1
