@@ -5,6 +5,12 @@
     "processed": "2026-11-21T10:06:42.607794+00:00",
     "url": "https://www.twitch.tv/videos/2934996320"
   },
+  "clix:v2936385310": {
+    "finished": false,
+    "offset": 17838.5,
+    "processed": "2026-11-21T23:38:00.380467+00:00",
+    "url": "https://www.twitch.tv/videos/2936385310"
+  },
   "dom:32d7bbef-dfdb-443f-b49b-0f1de52aabd9": {
     "finished": true,
     "offset": 30419.5,
@@ -63,6 +69,12 @@
     "processed": "2026-11-21T09:57:06.483246+00:00",
     "url": "https://www.twitch.tv/videos/2935059680"
   },
+  "lacy:v2936518555": {
+    "finished": false,
+    "offset": 10320.6,
+    "processed": "2026-11-21T23:25:16.975809+00:00",
+    "url": "https://www.twitch.tv/videos/2936518555"
+  },
   "published:2026-11-20": 2,
   "slot:2026-11-21T12:00": "20261120-clix-01-clix-discovers-chicken-fighting-in-gta-6.mp4",
   "slot:2026-11-21T15:00": "20261120-dom-01-dasgasdom-s-dad-is-dead-broke-in-gta-6-s.mp4",
@@ -71,5 +83,9 @@
   "slot:2026-11-22T12:00": "20261121-clix-01-clix-finds-out-why-his-gta-6-progress-wa.mp4",
   "slot:2026-11-22T15:00": "20261121-dom-01-dom-robbed-old-ladies-in-gta-6-for-1-300.mp4",
   "slot:2026-11-22T18:00": "20261121-clix-02-clix-thought-the-gta-6-npc-was-trolling-.mp4",
-  "slot:2026-11-22T21:00": "20261121-dom-02-dom-loses-it-over-the-gold-ak-47-upgrade.mp4"
+  "slot:2026-11-22T21:00": "20261121-dom-02-dom-loses-it-over-the-gold-ak-47-upgrade.mp4",
+  "slot:2026-11-23T12:00": "20261121-clix-01-clix-panics-trying-to-give-the-dog-a-coo.mp4",
+  "slot:2026-11-23T15:00": "20261121-lacy-01-lacy-s-gta-6-stealth-mission-gets-ruined.mp4",
+  "slot:2026-11-23T18:00": "20261121-clix-02-clix-calls-this-the-best-mission-of-his-.mp4",
+  "slot:2026-11-23T21:00": "20261121-lacy-02-lacy-waited-15-real-life-hours-for-this-.mp4"
 }
