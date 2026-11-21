@@ -1,8 +1,8 @@
 {
   "clix:v2934996320": {
     "finished": false,
-    "offset": 21600.0,
-    "processed": "2026-11-20T22:08:17.837780+00:00",
+    "offset": 39545.7,
+    "processed": "2026-11-21T02:38:47.607524+00:00",
     "url": "https://www.twitch.tv/videos/2934996320"
   },
   "dom:32d7bbef-dfdb-443f-b49b-0f1de52aabd9": {
@@ -28,6 +28,12 @@
     "offset": 59191.2,
     "processed": "2026-11-19T12:01:22.010730+00:00",
     "url": "https://kick.com/dasgasd3m/videos/baa12604-007b-4bfa-b0d3-7a61078f4670"
+  },
+  "dom:be2c2aad-f224-407d-ba7c-4b3e7c599d80": {
+    "finished": true,
+    "offset": 6049.9,
+    "processed": "2026-11-21T02:26:11.393032+00:00",
+    "url": "https://kick.com/dasgasd3m/videos/be2c2aad-f224-407d-ba7c-4b3e7c599d80"
   },
   "lacy:v2930061578": {
     "finished": true,
@@ -61,5 +67,9 @@
   "slot:2026-11-21T12:00": "20261120-clix-01-clix-discovers-chicken-fighting-in-gta-6.mp4",
   "slot:2026-11-21T15:00": "20261120-dom-01-dasgasdom-s-dad-is-dead-broke-in-gta-6-s.mp4",
   "slot:2026-11-21T18:00": "20261120-lacy-01-lacy-questions-why-random-yago-is-part-o.mp4",
-  "slot:2026-11-21T21:00": "20261120-clix-02-clix-tries-to-show-chat-a-jump-in-gta-6-.mp4"
+  "slot:2026-11-21T21:00": "20261120-clix-02-clix-tries-to-show-chat-a-jump-in-gta-6-.mp4",
+  "slot:2026-11-22T12:00": "20261121-clix-01-clix-finds-out-why-his-gta-6-progress-wa.mp4",
+  "slot:2026-11-22T15:00": "20261121-dom-01-dom-robbed-old-ladies-in-gta-6-for-1-300.mp4",
+  "slot:2026-11-22T18:00": "20261121-clix-02-clix-thought-the-gta-6-npc-was-trolling-.mp4",
+  "slot:2026-11-22T21:00": "20261121-dom-02-dom-loses-it-over-the-gold-ak-47-upgrade.mp4"
 }
