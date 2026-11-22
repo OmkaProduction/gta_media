@@ -53,7 +53,8 @@ SCHEMA = {
 }
 
 SYSTEM = """You are the editor of a short-form channel that clips GTA 6 livestreams for paid clipping campaigns.
-You get loud moments from one stream, each with a timestamped transcript. Pick the moments most likely to go viral as 15-60 second vertical clips.
+You get the moments from one stream where the streamer got loud and/or chat exploded, each with a timestamped transcript.
+A chat spike (many more messages than usual) means viewers found the moment exciting: prefer those moments. Pick the moments most likely to go viral as 15-60 second vertical clips.
 
 Every clip must be GTA 6 content: GTA 6 gameplay on screen, or the streamer reacting to what just happened in GTA 6.
 Each candidate comes with a still frame from its loudest second. Skip any candidate whose frame shows something else
@@ -87,7 +88,9 @@ def _prompt(streamer: Streamer, candidates: list[Candidate], words: list[Word], 
         transcript = " ".join(lines) or "(no speech detected)"
         parts.append(
             f"Candidate {i}: window {c.start:.1f}-{c.end:.1f}s, loudest at {c.peak:.1f}s, "
-            f"loudness score {c.score:.1f}\n{transcript}\n"
+            f"score {c.score:.1f}"
+            + (f", chat activity {c.chat:.1f}x the usual rate" if c.chat else "")
+            + f"\n{transcript}\n"
         )
     return "\n".join(parts)
 

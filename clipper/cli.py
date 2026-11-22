@@ -14,7 +14,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import analysis, captions, metadata, render, select, sources, transcribe
+from . import analysis, captions, chat, metadata, render, select, sources, transcribe
 from .config import ROOT, Streamer, load_streamers
 
 STATE_FILE = ROOT / "state" / "processed.json"
@@ -47,7 +47,10 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
         return [], chunk
     audio = chunk.path
     loud = analysis.loudness_per_second(audio)
-    candidates = analysis.find_candidates(loud, max_candidates=max(12, streamer.clips_per_vod * 4))
+    activity = chat.activity(vod, chunk.start, len(loud))
+    if activity is not None:
+        print(f"[{streamer.id}] chat replay: {activity.mean():.1f} messages/s on average, peak {activity.max():.1f}")
+    candidates = analysis.find_candidates(loud, max_candidates=max(12, streamer.clips_per_vod * 4), chat=activity)
     print(f"[{streamer.id}] {len(loud) / 3600:.1f} h of audio "
           f"({'whole VOD' if chunk.finished else 'live, chunk so far'}), {len(candidates)} candidate moments")
 
@@ -56,7 +59,7 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
         piece = analysis.cut_audio(audio, c.start, c.end, vod_dir / f"cand{i:02d}.wav")
         words += transcribe.transcribe(piece, offset=c.start + chunk.start, language=streamer.language)
     # from here on all times are VOD seconds
-    candidates = [analysis.Candidate(c.peak + chunk.start, c.start + chunk.start, c.end + chunk.start, c.score)
+    candidates = [analysis.Candidate(c.peak + chunk.start, c.start + chunk.start, c.end + chunk.start, c.score, c.chat)
                   for c in candidates]
 
     frames = sources.grab_frames(vod.download_url, [c.peak for c in candidates], vod_dir / "frames")

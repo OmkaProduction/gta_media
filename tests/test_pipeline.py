@@ -430,3 +430,39 @@ def test_publish_entries_in_state_do_not_break_vod_listing(monkeypatch, tmp_path
     monkeypatch.setattr(cli, "STATE_FILE", state)
     assert cli.main(["--streamer", "lacy", "--out", str(tmp_path / "o")]) == 0
     assert seen == [{"lacy:1"}]
+
+
+def test_chat_spike_becomes_a_candidate_even_when_audio_is_flat():
+    rng = np.random.default_rng(1)
+    loud = -30 + rng.normal(0, 0.5, 3600)
+    loud[600:606] += 15                       # one loud moment
+    rate = np.full(3600, 2.0)
+    rate[2008:2030] = 25.0                    # chat explodes ~8 s after a quiet moment at 2000 s
+    cands = analysis.find_candidates(loud, max_candidates=2, chat=rate)
+    peaks = sorted(c.peak for c in cands)
+    assert any(abs(p - 603) < 10 for p in peaks)
+    chat_cand = [c for c in cands if abs(c.peak - 2005) < 15]
+    assert chat_cand and chat_cand[0].chat > 5
+
+
+def test_chat_rates_from_twitch_and_kick_replays():
+    import datetime as dt
+    from clipper import chat
+    page = [{"data": {"video": {"comments": {"edges": [
+        {"node": {"contentOffsetSeconds": 100 + i * 0.5}} for i in range(40)]}}}}]
+    assert abs(chat.twitch_rate("1", 100, fetch=lambda url, body, headers: page) - 40 / 19.5) < 1e-6
+    seen = []
+    kick = lambda url: seen.append(url) or {"data": {"messages": [{}] * 10}}
+    start = dt.datetime(2026, 11, 20, 12, 0, tzinfo=dt.timezone.utc)
+    assert chat.kick_rate(42, start, 65, fetch=kick) == 2.0
+    assert seen == ["https://kick.com/api/v2/channels/42/messages?start_time=2026-11-20T12:01:05.000Z"]
+
+
+def test_chat_activity_is_none_when_the_replay_fails():
+    from clipper import chat, sources
+    vod = sources.Vod("lacy", "v1", "https://www.twitch.tv/videos/1", "t", None, None)
+    def broken(t):
+        raise OSError("blocked")
+    assert chat.activity(vod, 0, 600, rate=broken) is None
+    got = chat.activity(vod, 0, 600, rate=lambda t: 3.0 if 200 <= t < 240 else 1.0)
+    assert got.shape == (600,) and got.max() == 3.0

@@ -5,7 +5,7 @@ import datetime as dt
 import json
 import subprocess
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import Streamer
@@ -23,6 +23,7 @@ class Vod:
     duration: float | None
     is_live: bool = False
     media_url: str | None = None  # direct HLS playlist when the platform gives one (Kick)
+    chat: dict = field(default_factory=dict)  # what clipper.chat needs to read the chat replay
 
     @property
     def download_url(self) -> str:
@@ -102,6 +103,7 @@ def _list_kick(streamer: Streamer, limit: int) -> list[Vod]:
             # The channel API already returns the VOD's HLS playlist; using it directly avoids
             # yt-dlp's kick:vod extractor, which fails behind Kick's Cloudflare.
             media_url=item.get("source") or video.get("source") or None,
+            chat={"kick_channel_id": item.get("channel_id"), "start_time": item.get("start_time")},
         ))
     return vods
 

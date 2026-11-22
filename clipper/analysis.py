@@ -21,6 +21,7 @@ class Candidate:
     start: float   # window we transcribe and offer to the selector
     end: float
     score: float
+    chat: float = 0.0  # chat messages/s at the moment, relative to the stream's usual rate (1.0 = normal)
 
 
 def loudness_per_second(audio: Path) -> np.ndarray:
@@ -71,8 +72,12 @@ def find_candidates(
     after: float = 25.0,
     baseline_window: int = 300,
     min_relative: float = 0.2,
+    chat: np.ndarray | None = None,
+    chat_weight: float = 1.0,
+    chat_lag: int = 8,
 ) -> list[Candidate]:
-    """Top loudness peaks, at least `min_gap` seconds apart, as transcription windows."""
+    """Top peaks of loudness and, when given, chat activity, at least `min_gap` seconds apart,
+    as transcription windows."""
     n = len(loudness)
     if n == 0:
         return []
@@ -82,6 +87,20 @@ def find_candidates(
     # A 4-second moving sum rewards sustained reactions over single clicks.
     kernel = np.ones(4)
     smooth = np.convolve(np.maximum(excess, 0), kernel, mode="same")
+    chat_ratio = None
+    if chat is not None and len(chat) and np.any(chat > 0):
+        rate = np.zeros(n)
+        m = min(n, len(chat))
+        rate[:m] = chat[:m]
+        # Chat reacts a few seconds after the moment (stream delay + typing time).
+        rate = np.concatenate([rate[chat_lag:], np.repeat(rate[-1:], chat_lag)])[:n]
+        usual = np.maximum(_rolling_median(rate, 900), 0.05)
+        chat_ratio = rate / usual
+        chat_excess = np.convolve(np.maximum(chat_ratio - 1.0, 0), np.ones(10) / 10, mode="same")
+        # Both signals on the same scale: 1.0 = the strongest moment of the stream.
+        a_top = np.percentile(smooth, 99.9) or 1.0
+        c_top = np.percentile(chat_excess, 99.9) or 1.0
+        smooth = np.minimum(smooth / a_top, 1.5) + chat_weight * np.minimum(chat_excess / c_top, 1.5)
 
     order = np.argsort(smooth)[::-1]
     # Ignore background noise: a candidate must reach a fraction of the strongest peak.
@@ -95,7 +114,9 @@ def find_candidates(
 
     return sorted(
         (Candidate(peak=float(c), start=max(0.0, c - before), end=min(float(n), c + after),
-                   score=float(smooth[c])) for c in chosen),
+                   score=float(smooth[c]),
+                   chat=float(chat_ratio[max(0, c - 10): c + 20].max()) if chat_ratio is not None else 0.0)
+         for c in chosen),
         key=lambda c: c.start,
     )
 
