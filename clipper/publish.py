@@ -128,7 +128,7 @@ def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str
         print("BUFFER_API_KEY not set: not publishing")
         return 0
     base = config["base_url"].rstrip("/")
-    clips = sorted(out_dir.glob("*.mp4"), key=rank)
+    clips = sorted((c for c in out_dir.glob("*.mp4") if c.stat().st_size > 0), key=rank)
     # With `times`, each clip gets the next free fixed posting time, so posts go out at the
     # same hours every day and the backlog never grows past `days_ahead` days.
     state = _load_state(state_path)

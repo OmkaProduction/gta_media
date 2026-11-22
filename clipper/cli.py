@@ -35,6 +35,9 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "clip"
 
 
+RUN_NOTES: list[str] = []
+
+
 def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry_run: bool,
                 start: float = 0.0) -> tuple[list[str], sources.AudioChunk]:
     tag = f"{streamer.id}-{_slug(vod.vod_id)}"
@@ -48,8 +51,10 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
     audio = chunk.path
     loud = analysis.loudness_per_second(audio)
     activity = chat.activity(vod, chunk.start, len(loud))
-    if activity is not None:
-        print(f"[{streamer.id}] chat replay: {activity.mean():.1f} messages/s on average, peak {activity.max():.1f}")
+    note = (f"chat replay: {activity.mean():.1f} messages/s on average, peak {activity.max():.1f}"
+            if activity is not None else "chat replay unavailable: picked by loudness only")
+    print(f"[{streamer.id}] {note}")
+    RUN_NOTES.append(f"- {streamer.id} {vod.url} from {start / 3600:.1f} h: {note}")
     candidates = analysis.find_candidates(loud, max_candidates=max(12, streamer.clips_per_vod * 4), chat=activity)
     print(f"[{streamer.id}] {len(loud) / 3600:.1f} h of audio "
           f"({'whole VOD' if chunk.finished else 'live, chunk so far'}), {len(candidates)} candidate moments")
@@ -73,11 +78,18 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
         if dry_run:
             print(f"  would cut {plan.start:.0f}-{plan.end:.0f}s: {plan.title}")
             continue
-        section = sources.download_section(vod.download_url, plan.start, plan.end, vod_dir / f"{name}.src.mp4")
-        ass = vod_dir / f"{name}.ass"
-        ass.write_text(captions.build_ass(words, plan.start, plan.end, plan.hook, streamer.credit), encoding="utf-8")
-        render.render_vertical(section, ass, out / f"{name}.mp4", streamer.layout, streamer.facecam,
-                               duration=plan.end - plan.start)
+        try:
+            section = sources.download_section(vod.download_url, plan.start, plan.end, vod_dir / f"{name}.src.mp4")
+            ass = vod_dir / f"{name}.ass"
+            ass.write_text(captions.build_ass(words, plan.start, plan.end, plan.hook, streamer.credit), encoding="utf-8")
+            render.render_vertical(section, ass, out / f"{name}.mp4", streamer.layout, streamer.facecam,
+                                   duration=plan.end - plan.start)
+        except Exception as exc:
+            # One broken clip (e.g. a section the VOD no longer serves) must not cost the others.
+            (out / f"{name}.mp4").unlink(missing_ok=True)
+            print(f"[{streamer.id}] could not render {name}: {exc}", file=sys.stderr)
+            RUN_NOTES.append(f"- {streamer.id}: could not render {name}")
+            continue
         (out / f"{name}.txt").write_text(metadata.caption(streamer, plan) + "\n", encoding="utf-8")
         written.append(metadata.review_entry(streamer, vod.url, plan, f"{name}.mp4"))
     shutil.rmtree(vod_dir, ignore_errors=True)
@@ -142,6 +154,9 @@ def main(argv: list[str] | None = None) -> int:
                                   "offset": round(chunk.end, 1), "finished": chunk.finished}
                 save_state(state)
 
+    if RUN_NOTES and not args.dry_run:
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "RUN.md").write_text("# Run notes\n\n" + "\n".join(RUN_NOTES) + "\n", encoding="utf-8")
     if review:
         sheet = out / "REVIEW.md"
         sheet.write_text("# Clips to review\n\n" + "\n".join(review), encoding="utf-8")
