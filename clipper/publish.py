@@ -86,10 +86,12 @@ def _create(api_key: str, data: dict) -> str:
     return result["post"]["id"]
 
 
-def rank(clip: Path) -> tuple:
-    """Best clips first: the clip number is the picker's rank within its VOD."""
+def rank(clip: Path, priority: list[str] | None = None) -> tuple:
+    """Priority streamers first (campaigns that pay per view), then best clips first:
+    the clip number is the picker's rank within its VOD."""
     m = re.match(r"\d{8}-[a-z0-9_]+-(\d{2})-", clip.name)
-    return (int(m.group(1)) if m else 99, clip.name)
+    first = 0 if priority and streamer_of(clip.name) in priority else 1
+    return (first, int(m.group(1)) if m else 99, clip.name)
 
 
 def _load_state(path: Path) -> dict:
@@ -128,7 +130,7 @@ def publish(out_dir: Path, folder: str, config: dict | None = None, api_key: str
         print("BUFFER_API_KEY not set: not publishing")
         return 0
     base = config["base_url"].rstrip("/")
-    clips = sorted((c for c in out_dir.glob("*.mp4") if c.stat().st_size > 0), key=rank)
+    clips = sorted((c for c in out_dir.glob("*.mp4") if c.stat().st_size > 0), key=lambda c: rank(c, config.get("priority")))
     # With `times`, each clip gets the next free fixed posting time, so posts go out at the
     # same hours every day and the backlog never grows past `days_ahead` days.
     state = _load_state(state_path)

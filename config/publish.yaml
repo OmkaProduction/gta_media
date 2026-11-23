@@ -11,6 +11,7 @@ buffer:
   timezone: Europe/Warsaw
   times: ["12:00", "15:00", "18:00", "21:00"]
   days_ahead: 1
+  priority: [dom]           # these streamers' clips take free posting times first (Dom's campaign pays per view)
   channels:
     - id: 6aff8bbaece6dfde5f285eb4   # YouTube "Future Shock" (one shared channel for all campaign clips)
       service: youtube

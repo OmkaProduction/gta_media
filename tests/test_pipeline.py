@@ -474,3 +474,9 @@ def test_subscribe_button_shows_after_hook_and_at_the_end():
     assert len(subs) == 2 and "SUBSCRIBE" in subs[0]
     assert subs[0].split(",")[1] == "0:00:04.00" and subs[1].split(",")[2] == "0:00:30.00"
     assert ",Subscribe," not in captions.build_ass([], 0, 30, "hook", "credit", subscribe=False)
+
+
+def test_priority_streamer_clips_are_queued_first():
+    from clipper import publish
+    names = [Path(n) for n in ["20261123-clix-01-a.mp4", "20261123-dom-02-b.mp4", "20261123-lacy-01-c.mp4"]]
+    assert [p.name for p in sorted(names, key=lambda c: publish.rank(c, ["dom"]))][0] == "20261123-dom-02-b.mp4"
