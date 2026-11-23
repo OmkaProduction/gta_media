@@ -466,3 +466,11 @@ def test_chat_activity_is_none_when_the_replay_fails():
     assert chat.activity(vod, 0, 600, rate=broken) is None
     got = chat.activity(vod, 0, 600, rate=lambda t: 3.0 if 200 <= t < 240 else 1.0)
     assert got.shape == (600,) and got.max() == 3.0
+
+
+def test_subscribe_button_shows_after_hook_and_at_the_end():
+    ass = captions.build_ass([], 0, 30, "hook", "credit")
+    subs = [l for l in ass.splitlines() if ",Subscribe," in l]
+    assert len(subs) == 2 and "SUBSCRIBE" in subs[0]
+    assert subs[0].split(",")[1] == "0:00:04.00" and subs[1].split(",")[2] == "0:00:30.00"
+    assert ",Subscribe," not in captions.build_ass([], 0, 30, "hook", "credit", subscribe=False)
