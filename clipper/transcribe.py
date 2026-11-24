@@ -40,9 +40,19 @@ def load_pcm(audio: Path):
 
 
 def transcribe(audio: Path, offset: float, language: str = "en") -> list[Word]:
-    segments, _ = _model().transcribe(
-        load_pcm(audio), language=language, word_timestamps=True, vad_filter=True, beam_size=1,
-    )
+    pcm = load_pcm(audio)
+    if len(pcm) < 16000:        # under a second of audio (e.g. the cut ran past the end of a live chunk)
+        return []
+    try:
+        segments, _ = _model().transcribe(
+            pcm, language=language, word_timestamps=True, vad_filter=True, beam_size=1,
+        )
+        segments = list(segments)
+    except (IndexError, ValueError) as exc:
+        # faster-whisper can fail on windows with no speech at all (numpy boolean-index error);
+        # such a window simply has no words.
+        print(f"no transcript for {audio.name}: {exc}")
+        return []
     words = []
     for seg in segments:
         for w in seg.words or []:

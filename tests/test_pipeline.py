@@ -480,3 +480,18 @@ def test_priority_streamer_clips_are_queued_first():
     from clipper import publish
     names = [Path(n) for n in ["20261123-clix-01-a.mp4", "20261123-dom-02-b.mp4", "20261123-lacy-01-c.mp4"]]
     assert [p.name for p in sorted(names, key=lambda c: publish.rank(c, ["dom"]))][0] == "20261123-dom-02-b.mp4"
+
+
+def test_transcribe_survives_silent_or_empty_audio(monkeypatch, tmp_path):
+    from clipper import transcribe
+
+    monkeypatch.setattr(transcribe, "load_pcm", lambda audio: np.zeros(100, dtype=np.float32))
+    assert transcribe.transcribe(tmp_path / "x.wav", 0.0) == []
+
+    class Broken:
+        def transcribe(self, *a, **k):
+            raise IndexError("boolean index did not match indexed array along axis 0")
+
+    monkeypatch.setattr(transcribe, "load_pcm", lambda audio: np.zeros(16000 * 5, dtype=np.float32))
+    monkeypatch.setattr(transcribe, "_model", lambda: Broken())
+    assert transcribe.transcribe(tmp_path / "x.wav", 0.0) == []
