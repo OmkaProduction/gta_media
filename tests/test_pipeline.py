@@ -368,7 +368,8 @@ def test_publish_queues_each_clip_on_matching_channels(tmp_path):
     assert yt["metadata"]["youtube"] == {"title": "Dom vs shark", "categoryId": "20",
                                          "privacy": "public", "madeForKids": False}
     assert yt["text"].startswith("Dom vs shark") and yt["mode"] == "addToQueue"
-    assert sent[1]["metadata"]["tiktok"]["title"] == "Dom vs shark"
+    tiktok = [d for d in sent if "tiktok" in d.get("metadata", {})]
+    assert [d["metadata"]["tiktok"]["title"] for d in tiktok] == ["Dom vs shark"]
 
 
 def test_publish_is_off_without_config_or_key(tmp_path):
@@ -509,5 +510,42 @@ def test_two_posts_a_day_and_hook_pops_in():
     import yaml
     cfg = yaml.safe_load(open("config/publish.yaml"))["buffer"]
     assert cfg["times"] == ["18:00", "21:00"]
+    fb = [c for c in cfg["channels"] if c["service"] == "facebook"]
+    assert len(fb) == 1 and len(fb[0]["times"]) >= 3
     ass = captions.build_ass([], 0, 20, "Can Dom escape?", "credit")
     assert "\\fscx70" in ass and "CAN DOM ESCAPE?" in ass
+
+
+def test_facebook_fills_its_own_times_and_reuses_youtube_clips(tmp_path):
+    import json
+    from datetime import datetime, timezone
+    from clipper import publish
+    out = tmp_path / "out"
+    out.mkdir()
+    for name in ["20261126-dom-01-a", "20261126-lacy-01-b", "20261126-lacy-02-c"]:
+        (out / f"{name}.mp4").write_bytes(b"x")
+    state = tmp_path / "state.json"
+    state.write_text('{"slot:2026-11-26T18:00": "old.mp4"}')   # YouTube 18:00 already taken
+    yt, fb = "a" * 24, "b" * 24
+    config = {"enabled": True, "base_url": "https://x/clips", "timezone": "Europe/Warsaw",
+              "times": ["18:00", "21:00"], "days_ahead": 0,
+              "channels": [{"id": yt, "service": "youtube"},
+                           {"id": fb, "service": "facebook", "times": ["13:00", "16:00", "19:00"], "days_ahead": 0}]}
+    sent = []
+    create = lambda key, d: sent.append((d["channelId"], d["assets"][0]["video"]["url"].rsplit("/", 1)[1], d["dueAt"])) or "id"
+    now = datetime(2026, 11, 26, 9, 0, tzinfo=timezone.utc)   # 10:00 in Warsaw
+    publish.publish(out, "run-1", config=config, api_key="k", create=create, state_path=state, now=now)
+    assert [s for s in sent if s[0] == yt] == [(yt, "20261126-dom-01-a.mp4", "2026-11-26T21:00:00+01:00")]
+    assert [s[1:] for s in sent if s[0] == fb] == [
+        ("20261126-dom-01-a.mp4", "2026-11-26T13:00:00+01:00"),
+        ("20261126-lacy-01-b.mp4", "2026-11-26T16:00:00+01:00"),
+        ("20261126-lacy-02-c.mp4", "2026-11-26T19:00:00+01:00")]
+    saved = json.loads(state.read_text())
+    assert saved[f"slot:{fb}:2026-11-26T19:00"] == "20261126-lacy-02-c.mp4"
+    assert saved["slot:2026-11-26T21:00"] == "20261126-dom-01-a.mp4"
+    # a backfill of the same folder for Facebook only posts nothing twice
+    sent.clear()
+    publish.publish(out, "run-1", config=config, api_key="k", create=create, state_path=state, now=now, only="facebook")
+    assert sent == []
+    reel = publish.post_input({"id": fb, "service": "facebook"}, "u", "Title\n#GTA6")
+    assert reel["metadata"] == {"facebook": {"type": "reel"}}

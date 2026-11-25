@@ -1,7 +1,9 @@
 name: Queue clips
 
 # Queues the clips of one folder on the `clips` branch (run-<run id>) in Buffer,
-# e.g. clips made before publishing was set up. The daily limit in config/publish.yaml applies.
+# e.g. clips made before publishing was set up, or older clips for a newly added channel
+# (only: facebook). Each channel's posting times in config/publish.yaml apply; clips that
+# already took a time on a channel are skipped there.
 
 on:
   workflow_dispatch:
@@ -9,6 +11,10 @@ on:
       folder:
         description: "Folder on the clips branch, e.g. run-44739381862"
         required: true
+      only:
+        description: "Only this service, e.g. facebook (empty = every channel)"
+        required: false
+        default: ""
 
 concurrency:
   group: clipper
@@ -44,6 +50,7 @@ jobs:
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           FOLDER: ${{ inputs.folder }}
+          PUBLISH_ONLY: ${{ inputs.only }}
         run: python -m clipper.publish out "$FOLDER"
 
       - name: Remember queued clips

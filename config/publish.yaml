@@ -7,7 +7,7 @@ buffer:
   # direct public file URLs: the repo must be public for raw.githubusercontent.com links to work
   base_url: https://raw.githubusercontent.com/OmkaProduction/gta_media/clips
   mode: addToQueue          # used only without `times`: posts then go to the queue slots set in Buffer
-  # fixed posting times (Europe/Warsaw); each new clip takes the next free one, up to days_ahead days ahead
+  # fixed posting times (Europe/Warsaw), shared by channels without their own `times`; each new clip takes the next free one, up to days_ahead days ahead
   timezone: Europe/Warsaw
   times: ["18:00", "21:00"]   # 2 a day (25.11: fewer, stronger posts after YouTube stopped pushing 4/day)
   days_ahead: 1
@@ -15,4 +15,11 @@ buffer:
   channels:
     - id: 6aff8bbaece6dfde5f285eb4   # YouTube "Future Shock" (one shared channel for all campaign clips)
       service: youtube
-  # more: - id: <Buffer channel id>, service: tiktok | instagram | facebook, streamers: [dom] (optional filter)
+    - id: 6b075d598541f09ecba4c6b0   # Facebook page "GTA Moments OMK", posted as Reels
+      service: facebook
+      # its own posting times: big push at the start, 4 Reels a day (25.11, Jakub: at least 3 a day).
+      # Clips that already went to YouTube are fine here; each channel fills its own times.
+      times: ["13:00", "16:00", "19:00", "22:00"]
+      days_ahead: 2
+  # more: - id: <Buffer channel id>, service: tiktok | instagram | facebook,
+  #         streamers: [dom] (optional filter), times / days_ahead (optional, own posting times)
