@@ -83,7 +83,8 @@ def process_vod(streamer: Streamer, vod: sources.Vod, work: Path, out: Path, dry
             ass = vod_dir / f"{name}.ass"
             ass.write_text(captions.build_ass(words, plan.start, plan.end, plan.hook, streamer.credit), encoding="utf-8")
             render.render_vertical(section, ass, out / f"{name}.mp4", streamer.layout, streamer.facecam,
-                                   duration=plan.end - plan.start)
+                                   duration=plan.end - plan.start,
+                                   punch=(plan.punch - plan.start) if plan.punch is not None else None)
         except Exception as exc:
             # One broken clip (e.g. a section the VOD no longer serves) must not cost the others.
             (out / f"{name}.mp4").unlink(missing_ok=True)

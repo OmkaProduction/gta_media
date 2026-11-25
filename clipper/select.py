@@ -26,6 +26,7 @@ class ClipPlan:
     hook: str    # on-screen text for the first seconds
     title: str   # post title / first caption line
     reason: str
+    punch: float | None = None   # absolute VOD second of the strongest reaction (the edit zooms in there)
 
 
 SCHEMA = {
@@ -38,11 +39,12 @@ SCHEMA = {
             "items": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["candidate", "start", "end", "hook", "title", "reason"],
+                "required": ["candidate", "start", "end", "punch", "hook", "title", "reason"],
                 "properties": {
                     "candidate": {"type": "integer"},
                     "start": {"type": "number"},
                     "end": {"type": "number"},
+                    "punch": {"type": "number"},
                     "hook": {"type": "string"},
                     "title": {"type": "string"},
                     "reason": {"type": "string"},
@@ -61,12 +63,19 @@ Each candidate comes with a still frame from its loudest second. Skip any candid
 (a browser, a sports game, another game, a just-chatting or loading screen) or whose talk is clearly not about GTA 6,
 however funny it is. Campaigns only pay for GTA 6 clips, so return no clip rather than an off-topic one.
 
+Hundreds of other clippers cut the same streams for the same campaigns, and YouTube buries near-identical uploads.
+So do not just take the single biggest, most obvious moment of the stream that everyone else will clip too.
+Prefer moments with their own angle: a funny exchange with chat, an odd game detail, a running joke, a small fail
+with a great reaction, a clever or surprising line. A chat spike still matters: it shows viewers cared.
+
 What works: a clear setup and payoff, a strong genuine reaction, a funny line, a fail or glitch, a surprising game detail, an exchange with chat.
 Skip: moments that need context the viewer does not have, dead air, menu screens, long story cutscenes, ending or major story spoilers, NSFW content, and anything that makes the streamer look bad.
 
 For each clip you choose:
 - start/end: absolute seconds within the candidate's window. Start 1-3 seconds before the setup so the clip opens on action, and end right after the payoff.
-- hook: on-screen text shown for the first 2 seconds, max 8 words, English, names the streamer, says what happens without lying about it.
+- punch: the absolute second of the strongest reaction or payoff inside the clip; the edit zooms in on it.
+- hook: on-screen text shown for the first 2 seconds, max 7 words, English. It must make a viewer stay: a question,
+  a stake or a tease of the payoff in our own words (not a plain description), names the streamer, never lies.
 - title: the post title, max 90 characters, English, no hashtags.
 - reason: one short sentence on why it will hold viewers.
 Never invent dialogue or events that are not in the transcript. Return fewer clips rather than weak ones."""
@@ -105,7 +114,10 @@ def _clamp(plan: ClipPlan, cand: Candidate, streamer: Streamer) -> ClipPlan | No
         mid = (start + end) / 2
         half = streamer.min_clip_seconds / 2
         start, end = max(0.0, mid - half), mid + half
-    return ClipPlan(start=start, end=end, hook=plan.hook.strip(), title=plan.title.strip(), reason=plan.reason)
+    punch = plan.punch if plan.punch is not None and start < plan.punch < end else cand.peak
+    punch = punch if start < punch < end else None
+    return ClipPlan(start=start, end=end, hook=plan.hook.strip(), title=plan.title.strip(), reason=plan.reason,
+                    punch=punch)
 
 
 def fallback_plans(streamer: Streamer, candidates: list[Candidate], words: list[Word], count: int) -> list[ClipPlan]:
@@ -120,6 +132,7 @@ def fallback_plans(streamer: Streamer, candidates: list[Candidate], words: list[
             hook=f"{streamer.channel} in GTA 6",
             title=(text[:80] + "...") if len(text) > 80 else (text or f"{streamer.channel} GTA 6 moment"),
             reason="loudest moment (no AI selection)",
+            punch=c.peak if start < c.peak < end else None,
         ))
     return sorted(plans, key=lambda p: p.start)
 
@@ -180,7 +193,8 @@ def select_clips(streamer: Streamer, candidates: list[Candidate], words: list[Wo
         idx = item.get("candidate")
         if not isinstance(idx, int) or not 0 <= idx < len(candidates):
             continue
-        plan = _clamp(ClipPlan(item["start"], item["end"], item["hook"], item["title"], item["reason"]),
+        plan = _clamp(ClipPlan(item["start"], item["end"], item["hook"], item["title"], item["reason"],
+                                item.get("punch")),
                       candidates[idx], streamer)
         if plan:
             plans.append(plan)

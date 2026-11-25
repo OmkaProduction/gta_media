@@ -495,3 +495,19 @@ def test_transcribe_survives_silent_or_empty_audio(monkeypatch, tmp_path):
     monkeypatch.setattr(transcribe, "load_pcm", lambda audio: np.zeros(16000 * 5, dtype=np.float32))
     monkeypatch.setattr(transcribe, "_model", lambda: Broken())
     assert transcribe.transcribe(tmp_path / "x.wav", 0.0) == []
+
+
+def test_edit_zooms_on_the_punch_and_draws_a_progress_bar(tmp_path):
+    graph = render.filter_graph("fit", None, tmp_path / "a.ass", duration=20.0, punch=7.5)
+    assert "eval=frame" in graph and "7.35" in graph      # punch-in starts just before the reaction
+    assert "drawbox" in graph and "t/20.00" in graph       # progress bar fills over the clip
+    plain = render.filter_graph("fit", None, tmp_path / "a.ass")
+    assert "drawbox" not in plain
+
+
+def test_two_posts_a_day_and_hook_pops_in():
+    import yaml
+    cfg = yaml.safe_load(open("config/publish.yaml"))["buffer"]
+    assert cfg["times"] == ["18:00", "21:00"]
+    ass = captions.build_ass([], 0, 20, "Can Dom escape?", "credit")
+    assert "\\fscx70" in ass and "CAN DOM ESCAPE?" in ass

@@ -9,7 +9,7 @@ buffer:
   mode: addToQueue          # used only without `times`: posts then go to the queue slots set in Buffer
   # fixed posting times (Europe/Warsaw); each new clip takes the next free one, up to days_ahead days ahead
   timezone: Europe/Warsaw
-  times: ["12:00", "15:00", "18:00", "21:00"]
+  times: ["18:00", "21:00"]   # 2 a day (25.11: fewer, stronger posts after YouTube stopped pushing 4/day)
   days_ahead: 1
   priority: [dom]           # these streamers' clips take free posting times first (Dom's campaign pays per view)
   channels:

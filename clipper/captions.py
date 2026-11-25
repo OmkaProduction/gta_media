@@ -13,7 +13,7 @@ ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Caption,DejaVu Sans,78,&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,6,2,2,80,80,560,1
-Style: Hook,DejaVu Sans,70,&H0000F0FF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,18,0,8,70,70,260,1
+Style: Hook,DejaVu Sans,84,&H0000F0FF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,3,22,0,8,60,60,300,1
 Style: Subscribe,DejaVu Sans,62,&H00FFFFFF,&H00FFFFFF,&H000000E6,&H64000000,-1,0,0,0,100,100,2,0,3,22,0,2,60,60,400,1
 Style: Credit,DejaVu Sans,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H78000000,-1,0,0,0,100,100,0,0,3,10,0,8,60,60,120,1
 
@@ -51,6 +51,10 @@ def group_words(words: list[Word], max_words: int = 3, max_gap: float = 0.6, max
     return groups
 
 
+# The hook pops in on the very first frame and shakes once, so the opening frame is ours, not the stream's.
+HOOK_FX = (r"{\fad(0,200)\fscx70\fscy70\t(0,120,\fscx108\fscy108)\t(120,220,\fscx100\fscy100)"
+           r"\t(600,660,\frz-2)\t(660,720,\frz2)\t(720,780,\frz0)}")
+
 SUBSCRIBE_TEXT = "▶ SUBSCRIBE"
 # Pops in (overshoot, settle), "clicks" once, fades out.
 SUBSCRIBE_FX = (r"{\fad(0,250)\fscx40\fscy40\t(0,180,\fscx112\fscy112)\t(180,300,\fscx100\fscy100)"
@@ -75,7 +79,7 @@ def build_ass(words: list[Word], clip_start: float, clip_end: float, hook: str, 
             lines.append(f"Dialogue: 4,{_ts(a)},{_ts(b)},Subscribe,,0,0,0,,{SUBSCRIBE_FX}{SUBSCRIBE_TEXT}")
     lines.append(f"Dialogue: 2,{_ts(0)},{_ts(duration)},Credit,,0,0,0,,{_escape(credit)}")
     if hook:
-        lines.append(f"Dialogue: 3,{_ts(0)},{_ts(min(hook_seconds, duration))},Hook,,0,0,0,,{_escape(hook.upper())}")
+        lines.append(f"Dialogue: 3,{_ts(0)},{_ts(min(hook_seconds, duration))},Hook,,0,0,0,,{HOOK_FX}{_escape(hook.upper())}")
     inside = [w for w in words if w.end > clip_start and w.start < clip_end]
     groups = group_words(inside)
     for i, g in enumerate(groups):
