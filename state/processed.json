@@ -65,8 +65,8 @@
   },
   "lacy:v2935059680": {
     "finished": false,
-    "offset": 61941.3,
-    "processed": "2026-11-24T18:08:08.374229+00:00",
+    "offset": 83541.3,
+    "processed": "2026-11-25T02:44:13.303741+00:00",
     "url": "https://www.twitch.tv/videos/2935059680"
   },
   "lacy:v2936518555": {
@@ -100,5 +100,10 @@
   "slot:2026-11-24T21:00": "20261124-lacy-01-lacy-can-t-figure-out-what-chat-is-telli.mp4",
   "slot:2026-11-25T12:00": "20261124-lacy-02-lacy-switches-from-gangster-to-softie-in.mp4",
   "slot:2026-11-25T15:00": "20261124-lacy-03-lacy-hears-a-baby-crying-in-gta-6-and-ca.mp4",
-  "slot:2026-11-25T18:00": "20261124-lacy-04-lacy-thinks-lucia-s-drake-juan-missions-.mp4"
+  "slot:2026-11-25T18:00": "20261124-lacy-04-lacy-thinks-lucia-s-drake-juan-missions-.mp4",
+  "slot:2026-11-25T21:00": "20261125-lacy-01-lacy-lets-chat-decide-if-he-robs-the-ban.mp4",
+  "slot:2026-11-26T12:00": "20261125-lacy-02-lacy-is-baffled-by-this-gta-6-bank-vault.mp4",
+  "slot:2026-11-26T15:00": "20261125-lacy-03-lacy-already-knows-this-chatter-is-going.mp4",
+  "slot:2026-11-26T18:00": "20261125-lacy-04-lacy-shocked-how-fast-lucia-got-after-th.mp4",
+  "slot:2026-11-26T21:00": "20261125-lacy-05-lacy-can-t-believe-gta-6-makes-him-drive.mp4"
 }
