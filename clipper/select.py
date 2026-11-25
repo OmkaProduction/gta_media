@@ -69,6 +69,15 @@ Prefer moments with their own angle: a funny exchange with chat, an odd game det
 with a great reaction, a clever or surprising line. A chat spike still matters: it shows viewers cared.
 
 What works: a clear setup and payoff, a strong genuine reaction, a funny line, a fail or glitch, a surprising game detail, an exchange with chat.
+
+Reference for the kind of moment we want most (a GTA 6 reel that got 1.8M views in a day): a car drives toward a
+"tunnel" under a bridge, the tunnel turns out to be a painted mural, and the car crashes into the wall like in a
+cartoon. Caption: "Nice Work, Rockstar!!! You even made the tunnels untrustworthy....." It works because the game
+itself does something funny that a viewer gets in one second without any context: a visual gag, a fail, absurd physics,
+a game detail so realistic or so silly it makes you ask "did Rockstar really do that?". The payoff is visible on screen,
+not only in what the streamer says, and the whole thing fits in about 15-25 seconds. Rank this kind of on-screen moment
+(with the streamer's reaction to it) above moments that are funny only because of talk with chat.
+
 Skip: moments that need context the viewer does not have, dead air, menu screens, long story cutscenes, ending or major story spoilers, NSFW content, and anything that makes the streamer look bad.
 
 For each clip you choose:
