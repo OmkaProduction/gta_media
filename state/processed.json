@@ -53,8 +53,8 @@
   },
   "lacy:v2932194507": {
     "finished": false,
-    "offset": 43200.0,
-    "processed": "2026-11-25T22:37:46.586436+00:00",
+    "offset": 64800.0,
+    "processed": "2026-11-26T05:14:45.702145+00:00",
     "url": "https://www.twitch.tv/videos/2932194507"
   },
   "lacy:v2933767012": {
@@ -106,6 +106,7 @@
   "slot:2026-11-26T15:00": "20261125-lacy-03-lacy-already-knows-this-chatter-is-going.mp4",
   "slot:2026-11-26T18:00": "20261125-lacy-04-lacy-shocked-how-fast-lucia-got-after-th.mp4",
   "slot:2026-11-26T21:00": "20261125-lacy-05-lacy-can-t-believe-gta-6-makes-him-drive.mp4",
+  "slot:2026-11-27T18:00": "20261126-lacy-01-lacy-gets-nicknamed-the-vice-harbor-butc.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-26T13:00": "20261125-lacy-01-lacy-lets-chat-decide-if-he-robs-the-ban.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-26T16:00": "20261125-lacy-02-lacy-is-baffled-by-this-gta-6-bank-vault.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-26T19:00": "20261125-lacy-03-lacy-already-knows-this-chatter-is-going.mp4",
@@ -113,5 +114,6 @@
   "slot:6b075d598541f09ecba4c6b0:2026-11-27T13:00": "20261125-lacy-05-lacy-can-t-believe-gta-6-makes-him-drive.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-27T16:00": "20261124-lacy-01-lacy-can-t-figure-out-what-chat-is-telli.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-27T19:00": "20261124-lacy-02-lacy-switches-from-gangster-to-softie-in.mp4",
-  "slot:6b075d598541f09ecba4c6b0:2026-11-27T22:00": "20261124-lacy-03-lacy-hears-a-baby-crying-in-gta-6-and-ca.mp4"
+  "slot:6b075d598541f09ecba4c6b0:2026-11-27T22:00": "20261124-lacy-03-lacy-hears-a-baby-crying-in-gta-6-and-ca.mp4",
+  "slot:6b075d598541f09ecba4c6b0:2026-11-28T13:00": "20261126-lacy-01-lacy-gets-nicknamed-the-vice-harbor-butc.mp4"
 }
