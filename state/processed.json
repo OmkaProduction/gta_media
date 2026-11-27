@@ -53,8 +53,8 @@
   },
   "lacy:v2932194507": {
     "finished": false,
-    "offset": 64800.0,
-    "processed": "2026-11-26T05:14:45.702145+00:00",
+    "offset": 86400.0,
+    "processed": "2026-11-27T00:02:28.165952+00:00",
     "url": "https://www.twitch.tv/videos/2932194507"
   },
   "lacy:v2933767012": {
@@ -107,6 +107,9 @@
   "slot:2026-11-26T18:00": "20261125-lacy-04-lacy-shocked-how-fast-lucia-got-after-th.mp4",
   "slot:2026-11-26T21:00": "20261125-lacy-05-lacy-can-t-believe-gta-6-makes-him-drive.mp4",
   "slot:2026-11-27T18:00": "20261126-lacy-01-lacy-gets-nicknamed-the-vice-harbor-butc.mp4",
+  "slot:2026-11-27T21:00": "20261126-lacy-01-lacy-swears-he-spotted-drake-in-the-gta-.mp4",
+  "slot:2026-11-28T18:00": "20261126-lacy-02-lacy-realizes-he-lost-his-house-for-a-10.mp4",
+  "slot:2026-11-28T21:00": "20261127-lacy-03-lacy-finds-a-mystery-stash-hidden-in-a-g.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-26T13:00": "20261125-lacy-01-lacy-lets-chat-decide-if-he-robs-the-ban.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-26T16:00": "20261125-lacy-02-lacy-is-baffled-by-this-gta-6-bank-vault.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-26T19:00": "20261125-lacy-03-lacy-already-knows-this-chatter-is-going.mp4",
@@ -118,5 +121,8 @@
   "slot:6b075d598541f09ecba4c6b0:2026-11-28T13:00": "20261126-lacy-01-lacy-gets-nicknamed-the-vice-harbor-butc.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-28T16:00": "20261124-lacy-04-lacy-thinks-lucia-s-drake-juan-missions-.mp4",
   "slot:6b075d598541f09ecba4c6b0:2026-11-28T19:00": "20261123-lacy-01-lacy-asked-chat-to-rate-his-gta-6-skills.mp4",
-  "slot:6b075d598541f09ecba4c6b0:2026-11-28T22:00": "20261123-lacy-02-lacy-gets-wasted-robbing-a-tiny-corner-b.mp4"
+  "slot:6b075d598541f09ecba4c6b0:2026-11-28T22:00": "20261123-lacy-02-lacy-gets-wasted-robbing-a-tiny-corner-b.mp4",
+  "slot:6b075d598541f09ecba4c6b0:2026-11-29T13:00": "20261126-lacy-01-lacy-swears-he-spotted-drake-in-the-gta-.mp4",
+  "slot:6b075d598541f09ecba4c6b0:2026-11-29T16:00": "20261126-lacy-02-lacy-realizes-he-lost-his-house-for-a-10.mp4",
+  "slot:6b075d598541f09ecba4c6b0:2026-11-29T19:00": "20261127-lacy-03-lacy-finds-a-mystery-stash-hidden-in-a-g.mp4"
 }
